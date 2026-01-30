@@ -61,11 +61,6 @@ final userSchema = TableSchema(
   name: 'users',
   fields: [
     FieldSchema(
-      name: 'id',
-      type: DataType.integer,
-      nullable: false,
-    ),
-    FieldSchema(
       name: 'username',
       type: DataType.text,
       nullable: false,
@@ -82,9 +77,9 @@ final userSchema = TableSchema(
       nullable: false,
     ),
   ],
-  primaryKey: PrimaryKeyConfig(
-    fields: ['id'],
-    autoIncrement: true,
+  primaryKeyConfig: const PrimaryKeyConfig(
+    name: 'id',
+    type: PrimaryKeyType.autoIncrement,
   ),
   indexes: [
     IndexSchema(
