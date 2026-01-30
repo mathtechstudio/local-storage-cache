@@ -205,11 +205,10 @@ class StorageEngine {
 
     // Primary key
     final pk = schema.primaryKeyConfig;
-    buffer.write('${pk.name} ${_getDataTypeSQL(pk.type)}');
     if (pk.type == PrimaryKeyType.autoIncrement) {
-      buffer.write(' PRIMARY KEY AUTOINCREMENT');
+      buffer.write('${pk.name} INTEGER PRIMARY KEY AUTOINCREMENT');
     } else {
-      buffer.write(' PRIMARY KEY');
+      buffer.write('${pk.name} TEXT PRIMARY KEY');
     }
 
     // Fields

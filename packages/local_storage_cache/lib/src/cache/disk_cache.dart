@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:local_storage_cache/src/enums/eviction_policy.dart';
 import 'package:local_storage_cache/src/models/cache_entry.dart';
 import 'package:path/path.dart' as path;
@@ -248,8 +249,12 @@ class DiskCache {
   }
 
   /// Sanitizes a cache key for use as a filename.
+  ///
+  /// Uses SHA-1 hash to avoid key collisions and ensure valid filenames.
   String _sanitizeKey(String key) {
-    return key.replaceAll(RegExp(r'[^\w\-]'), '_');
+    final bytes = utf8.encode(key);
+    final digest = sha1.convert(bytes);
+    return digest.toString();
   }
 
   /// Saves a cache entry to disk.

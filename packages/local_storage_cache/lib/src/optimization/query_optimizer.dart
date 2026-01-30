@@ -166,11 +166,16 @@ class QueryOptimizer {
   }
 
   /// Detects missing indexes that could improve query performance.
+  ///
+  /// Analyzes WHERE, ORDER BY, and JOIN clauses to suggest indexes.
   List<String> detectMissingIndexes(String sql, String tableName) {
     final schema = _schemas[tableName];
     if (schema == null) return [];
 
     final missingIndexes = <String>[];
+    final normalizedSql = sql.toUpperCase();
+
+    // Check WHERE clause
     final whereMatch =
         RegExp(r'WHERE\s+(.+?)(?:ORDER|GROUP|LIMIT|$)', caseSensitive: false)
             .firstMatch(sql);
@@ -186,7 +191,54 @@ class QueryOptimizer {
           final hasIndex =
               schema.indexes.any((index) => index.fields.contains(field.name));
 
-          if (!hasIndex) {
+          if (!hasIndex && !missingIndexes.contains(field.name)) {
+            missingIndexes.add(field.name);
+          }
+        }
+      }
+    }
+
+    // Check ORDER BY clause
+    final orderByMatch =
+        RegExp(r'ORDER\s+BY\s+(.+?)(?:LIMIT|$)', caseSensitive: false)
+            .firstMatch(sql);
+
+    if (orderByMatch != null) {
+      final orderByClause = orderByMatch.group(1) ?? '';
+
+      for (final field in schema.fields) {
+        final fieldPattern =
+            RegExp('\\b${field.name.toUpperCase()}\\b', caseSensitive: false);
+
+        if (fieldPattern.hasMatch(orderByClause)) {
+          final hasIndex =
+              schema.indexes.any((index) => index.fields.contains(field.name));
+
+          if (!hasIndex && !missingIndexes.contains(field.name)) {
+            missingIndexes.add(field.name);
+          }
+        }
+      }
+    }
+
+    // Check JOIN conditions
+    final joinMatches = RegExp(
+      r'JOIN\s+\w+\s+ON\s+(.+?)(?:WHERE|ORDER|GROUP|LIMIT|JOIN|$)',
+      caseSensitive: false,
+    ).allMatches(sql);
+
+    for (final joinMatch in joinMatches) {
+      final joinCondition = joinMatch.group(1) ?? '';
+
+      for (final field in schema.fields) {
+        final fieldPattern =
+            RegExp('\\b${field.name.toUpperCase()}\\b', caseSensitive: false);
+
+        if (fieldPattern.hasMatch(joinCondition)) {
+          final hasIndex =
+              schema.indexes.any((index) => index.fields.contains(field.name));
+
+          if (!hasIndex && !missingIndexes.contains(field.name)) {
             missingIndexes.add(field.name);
           }
         }

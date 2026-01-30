@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:local_storage_cache/src/enums/data_type.dart';
 import 'package:local_storage_cache/src/models/migration_operation.dart';
@@ -681,7 +682,7 @@ class SchemaManager {
     List<MigrationOperation> operations,
   ) async {
     final operationsJson =
-        operations.map((op) => op.toMap()).toList().toString();
+        jsonEncode(operations.map((op) => op.toMap()).toList());
 
     await executeRawInsert(
       'INSERT INTO $_migrationHistoryTable (task_id, table_name, to_version, operations, state, started_at) VALUES (?, ?, ?, ?, ?, ?)',
