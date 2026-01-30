@@ -90,14 +90,14 @@ await storage.delete('users', where: 'id = ?', whereArgs: [userId]);
 
 ## Platform Requirements
 
-| Platform | Minimum Version | Notes |
-|----------|----------------|-------|
-| Android  | API 21 (5.0+)  | Requires SQLite 3.8.0+ |
-| iOS      | 12.0+          | Uses SQLite.swift |
-| macOS    | 10.14+         | Uses SQLite.swift |
-| Windows  | 10+            | Requires Visual C++ Runtime |
-| Linux    | Ubuntu 18.04+  | Requires libsqlite3 |
-| Web      | Modern browsers | Uses IndexedDB |
+| Platform | Minimum Version | Notes                       |
+| -------- | --------------- | --------------------------- |
+| Android  | API 21 (5.0+)   | Requires SQLite 3.8.0+      |
+| iOS      | 12.0+           | Uses SQLite.swift           |
+| macOS    | 10.14+          | Uses SQLite.swift           |
+| Windows  | 10+             | Requires Visual C++ Runtime |
+| Linux    | Ubuntu 18.04+   | Requires libsqlite3         |
+| Web      | Modern browsers | Uses IndexedDB              |
 
 ## Advanced Features
 
@@ -287,8 +287,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Support
 
 - Report issues on [GitHub Issues](https://github.com/protheeuz/local-storage-cache/issues)
-- Ask questions on [GitHub Discussions](https://github.com/protheeuz/local-storage-cache/discussions)
-- View the [changelog](CHANGELOG.md) for version history
+- View the [CHANGELOG](CHANGELOG.md) for version history
 
 ## Acknowledgments
 
