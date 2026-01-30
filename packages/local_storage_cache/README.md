@@ -157,22 +157,19 @@ final postsWithAuthors = await storage.query('posts')
 #### Update Data
 
 ```dart
-await storage.update(
-  'users',
-  {'email': 'newemail@example.com'},
-  where: 'id = ?',
-  whereArgs: [userId],
-);
+// Update using query builder
+await storage.query('users')
+  .where('id', '=', userId)
+  .update({'email': 'newemail@example.com'});
 ```
 
 #### Delete Data
 
 ```dart
-await storage.delete(
-  'users',
-  where: 'id = ?',
-  whereArgs: [userId],
-);
+// Delete using query builder
+await storage.query('users')
+  .where('id', '=', userId)
+  .delete();
 ```
 
 ### Advanced Features
@@ -182,11 +179,8 @@ await storage.delete(
 Isolate data for different users or contexts:
 
 ```dart
-// Create a space for a specific user
-await storage.createSpace('user_123');
-
-// Switch to that space
-await storage.switchSpace('user_123');
+// Switch to a space for a specific user
+await storage.switchSpace(spaceName: 'user_123');
 
 // All operations now work within this space
 await storage.insert('notes', {
@@ -194,8 +188,11 @@ await storage.insert('notes', {
   'content': 'Note content',
 });
 
-// Switch back to global space
-await storage.switchSpace(null);
+// Switch back to default space
+await storage.switchSpace(spaceName: 'default');
+
+// Get current space name
+final currentSpace = storage.currentSpace;
 ```
 
 #### Batch Operations
@@ -226,90 +223,53 @@ await storage.transaction(() async {
 });
 ```
 
-#### Caching
+#### Streaming Large Datasets
+
+For memory-efficient processing of large datasets:
 
 ```dart
-// Enable query caching
-final users = await storage.query('users')
-  .where('status', '=', 'active')
-  .useQueryCache(Duration(minutes: 5))
-  .get();
+// Stream records one at a time
+await for (final record in storage.streamQuery('large_table')) {
+  await processRecord(record);
+}
 
-// Warm cache for frequently accessed data
-await storage.warmCache('users', [
-  {'username': 'john_doe'},
-  {'username': 'jane_doe'},
-]);
-
-// Clear cache
-await storage.clearCache();
-```
-
-#### Backup and Restore
-
-```dart
-// Create a backup
-await storage.backup(BackupConfig(
-  path: '/path/to/backup.db',
-  compress: true,
-  encrypt: true,
-));
-
-// Restore from backup
-await storage.restore(RestoreConfig(
-  path: '/path/to/backup.db',
-  decrypt: true,
-));
-```
-
-#### Data Validation
-
-```dart
-final schema = TableSchema(
-  name: 'users',
-  fields: [
-    FieldSchema(
-      name: 'email',
-      type: DataType.text,
-      nullable: false,
-      validators: [
-        (value) {
-          if (!value.contains('@')) {
-            return 'Invalid email format';
-          }
-          return null;
-        },
-      ],
-    ),
-    FieldSchema(
-      name: 'age',
-      type: DataType.integer,
-      nullable: false,
-      validators: [
-        (value) {
-          if (value < 18) {
-            return 'Must be 18 or older';
-          }
-          return null;
-        },
-      ],
-    ),
-  ],
-);
+// Or use query builder
+await for (final record in storage.query('logs').stream()) {
+  print(record);
+}
 ```
 
 #### Event Monitoring
 
 ```dart
 // Listen to storage events
-storage.eventStream.listen((event) {
-  print('Event: ${event.type} on ${event.tableName}');
+storage.eventManager.stream.listen((event) {
+  print('Event: ${event.type} on table: ${event.tableName}');
 });
 
+// Get storage statistics
+final stats = await storage.getStats();
+print('Storage size: ${stats.storageSize} bytes');
+print('Record count: ${stats.recordCount}');
+print('Table count: ${stats.tableCount}');
+
 // Get performance metrics
-final metrics = await storage.getMetrics();
+final metrics = storage.metricsManager.getMetrics();
 print('Total queries: ${metrics.totalQueries}');
 print('Average query time: ${metrics.averageQueryTime}ms');
+```
+
+#### Database Maintenance
+
+```dart
+// Reclaim unused space
+await storage.vacuum();
+
+// Export database
+await storage.exportDatabase('/path/to/export.db');
+
+// Import database
+await storage.importDatabase('/path/to/import.db');
 ```
 
 ## Configuration
@@ -327,22 +287,28 @@ final config = StorageConfig(
     useSecureStorage: true,
   ),
   cache: CacheConfig(
-    enabled: true,
-    maxMemorySize: 10 * 1024 * 1024, // 10 MB
-    maxDiskSize: 50 * 1024 * 1024,   // 50 MB
+    maxMemoryCacheSize: 100,
+    maxDiskCacheSize: 1000,
     defaultTTL: Duration(hours: 1),
+    evictionPolicy: EvictionPolicy.lru,
+    enableQueryCache: true,
+    enableWarmCache: false,
   ),
   performance: PerformanceConfig(
-    enableConnectionPool: true,
-    maxConnections: 5,
+    connectionPoolSize: 5,
     enablePreparedStatements: true,
     enableQueryOptimization: true,
+    enableBatchOptimization: true,
+    batchSize: 100,
   ),
   logging: LogConfig(
-    enabled: true,
     level: LogLevel.info,
-    logToFile: false,
+    logQueries: false,
+    logPerformance: false,
   ),
+  enableAutoBackup: false,
+  enableMetrics: true,
+  enableEventStream: true,
 );
 ```
 
@@ -375,13 +341,12 @@ final encryptionConfig = EncryptionConfig(
 
 ```dart
 final cacheConfig = CacheConfig(
-  enabled: true,
-  maxMemorySize: 10 * 1024 * 1024,  // 10 MB
-  maxDiskSize: 50 * 1024 * 1024,    // 50 MB
+  maxMemoryCacheSize: 100,
+  maxDiskCacheSize: 1000,
   defaultTTL: Duration(hours: 1),
   evictionPolicy: EvictionPolicy.lru,
   enableQueryCache: true,
-  queryCacheTTL: Duration(minutes: 5),
+  enableWarmCache: false,
 );
 ```
 
@@ -444,45 +409,103 @@ The package uses IndexedDB for storage on web platforms. Encryption is supported
 
 **Important**: The package only works on HTTPS or localhost environments for security reasons.
 
+## Schema Definition
+
+The package uses strongly-typed schemas to define your data structure:
+
+```dart
+final userSchema = TableSchema(
+  name: 'users',
+  fields: [
+    FieldSchema(
+      name: 'username',
+      type: DataType.text,
+      nullable: false,
+      unique: true,
+    ),
+    FieldSchema(
+      name: 'email',
+      type: DataType.text,
+      nullable: false,
+    ),
+    FieldSchema(
+      name: 'age',
+      type: DataType.integer,
+      nullable: true,
+    ),
+    FieldSchema(
+      name: 'created_at',
+      type: DataType.datetime,
+      nullable: false,
+      defaultValue: 'CURRENT_TIMESTAMP',
+    ),
+  ],
+  primaryKeyConfig: const PrimaryKeyConfig(
+    name: 'id',
+    type: PrimaryKeyType.autoIncrement,
+  ),
+  indexes: [
+    IndexSchema(
+      name: 'idx_username',
+      fields: ['username'],
+      unique: true,
+    ),
+    IndexSchema(
+      name: 'idx_email',
+      fields: ['email'],
+    ),
+  ],
+  foreignKeys: [
+    ForeignKeySchema(
+      field: 'department_id',
+      referenceTable: 'departments',
+      referenceField: 'id',
+      onDelete: ForeignKeyAction.cascade,
+      onUpdate: ForeignKeyAction.cascade,
+    ),
+  ],
+);
+```
+
 ## Schema Migration
 
-The package supports automatic schema migration with zero downtime:
+The package automatically handles schema changes when you update your table definitions and increment the database version:
 
 ```dart
 // Version 1 schema
 final userSchemaV1 = TableSchema(
   name: 'users',
   fields: [
-    FieldSchema(name: 'id', type: DataType.integer),
-    FieldSchema(name: 'name', type: DataType.text),
+    FieldSchema(name: 'username', type: DataType.text),
+    FieldSchema(name: 'email', type: DataType.text),
   ],
+  primaryKeyConfig: const PrimaryKeyConfig(
+    name: 'id',
+    type: PrimaryKeyType.autoIncrement,
+  ),
 );
 
 // Version 2 schema with new field
 final userSchemaV2 = TableSchema(
   name: 'users',
   fields: [
-    FieldSchema(name: 'id', type: DataType.integer),
-    FieldSchema(name: 'name', type: DataType.text),
-    FieldSchema(name: 'email', type: DataType.text), // New field
+    FieldSchema(name: 'username', type: DataType.text),
+    FieldSchema(name: 'email', type: DataType.text),
+    FieldSchema(name: 'phone', type: DataType.text), // New field
   ],
+  primaryKeyConfig: const PrimaryKeyConfig(
+    name: 'id',
+    type: PrimaryKeyType.autoIncrement,
+  ),
 );
 
-// Initialize with migration
+// Initialize with new version
 final storage = StorageEngine(
   config: StorageConfig(
     databaseName: 'my_app.db',
     version: 2, // Increment version
   ),
   schemas: [userSchemaV2],
-  onMigrate: (oldVersion, newVersion) async {
-    if (oldVersion < 2) {
-      // Custom migration logic if needed
-      await storage.execute(
-        'UPDATE users SET email = name || "@example.com"',
-      );
-    }
-  },
 );
 
 await storage.initialize();
@@ -492,34 +515,38 @@ await storage.initialize();
 
 ### Connection Pooling
 
+The package uses connection pooling to improve performance:
+
 ```dart
 final config = StorageConfig(
   performance: PerformanceConfig(
-    enableConnectionPool: true,
-    maxConnections: 5,
-    connectionTimeout: Duration(seconds: 30),
+    connectionPoolSize: 5,
+    enablePreparedStatements: true,
+    enableQueryOptimization: true,
   ),
 );
 ```
 
 ### Prepared Statements
 
+Prepared statements are automatically cached for frequently used queries:
+
 ```dart
 final config = StorageConfig(
   performance: PerformanceConfig(
     enablePreparedStatements: true,
-    preparedStatementCacheSize: 100,
   ),
 );
 ```
 
 ### Query Optimization
 
+The package automatically optimizes queries:
+
 ```dart
 final config = StorageConfig(
   performance: PerformanceConfig(
     enableQueryOptimization: true,
-    analyzeQueries: true,
   ),
 );
 ```
@@ -529,13 +556,23 @@ final config = StorageConfig(
 Use batch operations for multiple inserts, updates, or deletes:
 
 ```dart
-// Instead of this
-for (final user in users) {
-  await storage.insert('users', user);
-}
-
-// Do this
+// Batch insert
+final users = [
+  {'username': 'user1', 'email': 'user1@example.com'},
+  {'username': 'user2', 'email': 'user2@example.com'},
+  {'username': 'user3', 'email': 'user3@example.com'},
+];
 await storage.batchInsert('users', users);
+
+// Batch update
+final updates = [
+  {'id': 1, 'email': 'new1@example.com'},
+  {'id': 2, 'email': 'new2@example.com'},
+];
+await storage.batchUpdate('users', updates);
+
+// Batch delete
+await storage.batchDelete('users', [1, 2, 3]);
 ```
 
 ## Error Handling
@@ -546,19 +583,15 @@ The package provides comprehensive error handling with specific exception types:
 try {
   await storage.insert('users', {'username': 'john_doe'});
 } on StorageException catch (e) {
-  switch (e.code) {
-    case ErrorCode.databaseNotInitialized:
-      print('Database not initialized');
-      break;
-    case ErrorCode.encryptionFailed:
-      print('Encryption failed: ${e.message}');
-      break;
-    case ErrorCode.validationFailed:
-      print('Validation failed: ${e.details}');
-      break;
-    default:
-      print('Storage error: ${e.message}');
+  print('Storage error: ${e.message}');
+  if (e.code != null) {
+    print('Error code: ${e.code}');
   }
+  if (e.details != null) {
+    print('Details: ${e.details}');
+  }
+} catch (e) {
+  print('Unexpected error: $e');
 }
 ```
 
