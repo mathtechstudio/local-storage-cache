@@ -47,7 +47,7 @@ jobs:
         run: melos bootstrap
 
       - name: Run Unit Tests
-        run: melos test
+        run: melos exec --fail-fast --ignore="*_web" --concurrency=1 -- flutter test
 
   platform_tests:
     name: Platform Tests
