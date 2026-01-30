@@ -182,29 +182,75 @@ Timer.periodic(const Duration(days: 90), (_) {
 
 ### Key Derivation
 
-Derive keys from user passwords securely:
+**WARNING**: Never implement your own key derivation function. Always use established, secure KDF libraries.
+
+For deriving encryption keys from user passwords, you MUST use a proper Key Derivation Function (KDF) such as:
+
+- **PBKDF2** (Password-Based Key Derivation Function 2)
+- **Argon2** (recommended for new applications)
+- **scrypt**
+
+A single round of hashing (SHA-256, MD5, etc.) is **cryptographically insecure** and vulnerable to brute-force and dictionary attacks.
+
+#### Recommended Approach
+
+Use a reputable cryptography library that implements secure KDFs:
 
 ```dart
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
+// Example using the 'cryptography' package
+import 'package:cryptography/cryptography.dart';
 
-String deriveKey(String password, String salt) {
-  // Use PBKDF2 with high iteration count
-  final bytes = utf8.encode(password + salt);
-  final digest = sha256.convert(bytes);
-  return base64.encode(digest.bytes);
+Future<String> deriveKeyFromPassword(String password, List<int> salt) async {
+  final pbkdf2 = Pbkdf2(
+    macAlgorithm: Hmac.sha256(),
+    iterations: 100000, // Minimum recommended iterations
+    bits: 256, // 256-bit key for AES-256
+  );
+
+  final secretKey = await pbkdf2.deriveKey(
+    secretKey: SecretKey(utf8.encode(password)),
+    nonce: salt,
+  );
+
+  final keyBytes = await secretKey.extractBytes();
+  return base64Url.encode(keyBytes);
 }
 
-// Use derived key
-final key = deriveKey(userPassword, secureRandomSalt);
+// Generate a cryptographically secure salt
+List<int> generateSalt() {
+  final random = Random.secure();
+  return List<int>.generate(16, (_) => random.nextInt(256));
+}
+
+// Usage
+final salt = generateSalt();
+final derivedKey = await deriveKeyFromPassword(userPassword, salt);
+
 final storage = StorageEngine(
   config: StorageConfig(
     encryption: EncryptionConfig(
       enabled: true,
-      customKey: key,
+      customKey: derivedKey,
     ),
   ),
 );
+```
+
+#### Important Notes
+
+- **Iterations**: Use at least 100,000 iterations for PBKDF2 (2023 OWASP recommendation)
+- **Salt**: Always use a unique, random salt for each password
+- **Salt Storage**: Store the salt alongside the encrypted data (it doesn't need to be secret)
+- **Salt Length**: Use at least 16 bytes (128 bits) for the salt
+- **Never reuse salts**: Each password derivation should use a unique salt
+
+#### Add Dependency
+
+Add the `cryptography` package to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  cryptography: ^2.5.0
 ```
 
 ### Protect Keys in Memory
@@ -686,16 +732,6 @@ Future<SecurityAuditReport> performSecurityAudit() async {
   return report;
 }
 ```
-
-## Reporting Security Issues
-
-If you discover a security vulnerability:
-
-1. Do not open a public issue
-2. Email security@example.com with details
-3. Include steps to reproduce
-4. Allow time for patch before disclosure
-5. Follow responsible disclosure practices
 
 ## Security Resources
 
