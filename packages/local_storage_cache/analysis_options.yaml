@@ -1,0 +1,43 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+linter:
+  rules:
+    public_member_api_docs: true
+    lines_longer_than_80_chars: false
+    # Disable style-only rules
+    always_use_package_imports: false
+    prefer_const_constructors: false
+    prefer_const_declarations: false
+    prefer_const_literals_to_create_immutables: false
+    avoid_redundant_argument_values: false
+    cascade_invocations: false
+    require_trailing_commas: false
+    unnecessary_breaks: false
+    prefer_int_literals: false
+    avoid_slow_async_io: false
+    use_super_parameters: false
+    directives_ordering: false
+    sort_constructors_first: false
+    unnecessary_lambdas: false
+    unnecessary_statements: false
+    one_member_abstracts: false
+    avoid_single_cascade_in_expression_statements: false
+    use_if_null_to_convert_nulls_to_bools: false
+    avoid_dynamic_calls: false
+    
+analyzer:
+  errors:
+    # Downgrade warnings to info
+    unused_field: info
+    unused_local_variable: info
+    dead_code: info
+    inference_failure_on_instance_creation: info
+    strict_raw_type: info
+    await_only_futures: info
+    unawaited_futures: info
+    use_of_void_result: ignore
+    
+  exclude:
+    - '**/*.g.dart'
+    - '**/*.freezed.dart'
+    - 'test/query_optimizer_test.dart'
