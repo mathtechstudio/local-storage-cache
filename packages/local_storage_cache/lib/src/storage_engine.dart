@@ -584,40 +584,52 @@ class StorageEngine {
     return '${_currentSpace}__kv';
   }
 
-  /// Serializes a value to string for storage.
+  /// Serializes a value to JSON string for storage.
+  ///
+  /// Uses standard JSON encoding to handle all data types safely,
+  /// including strings with special characters.
   String _serializeValue(dynamic value) {
-    if (value == null) return 'null';
-    if (value is String) return 'string:$value';
-    if (value is int) return 'int:$value';
-    if (value is double) return 'double:$value';
-    if (value is bool) return 'bool:$value';
-    // For complex types, use JSON
-    return 'json:$value';
+    return jsonEncode(value);
   }
 
-  /// Deserializes a value from string.
+  /// Deserializes a value from JSON string.
+  ///
+  /// Handles type conversion for numeric types where JSON may decode
+  /// to int or double depending on the value.
   T? _deserializeValue<T>(String valueStr) {
-    if (valueStr == 'null') return null;
+    try {
+      final decoded = jsonDecode(valueStr);
 
-    final parts = valueStr.split(':');
-    if (parts.length < 2) return valueStr as T;
+      if (decoded == null) {
+        return null;
+      }
 
-    final type = parts[0];
-    final value = parts.sublist(1).join(':');
+      // Direct type match
+      if (decoded is T) {
+        return decoded;
+      }
 
-    switch (type) {
-      case 'string':
-        return value as T;
-      case 'int':
-        return int.parse(value) as T;
-      case 'double':
-        return double.parse(value) as T;
-      case 'bool':
-        return (value == 'true') as T;
-      case 'json':
-        return value as T; // Return as string, caller can parse
-      default:
-        return valueStr as T;
+      // Handle numeric type conversions
+      // JSON decodes numbers as int or double, handle potential mismatch
+      if (T == double && decoded is int) {
+        return decoded.toDouble() as T;
+      }
+      if (T == int && decoded is double) {
+        return decoded.toInt() as T;
+      }
+
+      // Attempt cast for other types
+      try {
+        return decoded as T?;
+      } catch (e) {
+        _logger.warning(
+          'Failed to cast deserialized value to type $T: $decoded',
+        );
+        return null;
+      }
+    } catch (e) {
+      _logger.error('Failed to deserialize value: $valueStr', e);
+      return null;
     }
   }
 
