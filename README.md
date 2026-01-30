@@ -44,12 +44,14 @@ import 'package:local_storage_cache/local_storage_cache.dart';
 final userSchema = TableSchema(
   name: 'users',
   fields: [
-    FieldSchema(name: 'id', type: DataType.integer, nullable: false),
     FieldSchema(name: 'username', type: DataType.text, nullable: false, unique: true),
     FieldSchema(name: 'email', type: DataType.text, nullable: false),
     FieldSchema(name: 'created_at', type: DataType.datetime, nullable: false),
   ],
-  primaryKey: PrimaryKeyConfig(fields: ['id'], autoIncrement: true),
+  primaryKeyConfig: const PrimaryKeyConfig(
+    name: 'id',
+    type: PrimaryKeyType.autoIncrement,
+  ),
   indexes: [IndexSchema(name: 'idx_username', fields: ['username'])],
 );
 
