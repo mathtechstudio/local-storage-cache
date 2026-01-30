@@ -80,7 +80,7 @@ void main() {
           'status': 'active',
           'role': 'moderator',
         },
-      ]);
+      ], tableName: 'default_users');
     });
 
     tearDown(() async {

@@ -32,15 +32,16 @@ void setupMockPlatformChannels() {
         case 'close':
           return null;
         case 'insert':
-          // Store the inserted data
-          final data = Map<String, dynamic>.from(args!['data'] as Map);
+          // Store the inserted data by table name
+          final tableName = args!['tableName'] as String;
+          final data = Map<String, dynamic>.from(args['data'] as Map);
           final id = _mockInsertId++;
           data['id'] = id;
 
           if (_inTransaction) {
-            _transactionBuffer.add(data);
+            _transactionBuffer.add({'table': tableName, 'data': data});
           } else {
-            _mockDatabase.add(data);
+            _mockDatabaseByTable.putIfAbsent(tableName, () => []).add(data);
           }
           return id;
         case 'query':
@@ -48,95 +49,140 @@ void setupMockPlatformChannels() {
           final sql = args!['sql'] as String;
           final arguments = (args['arguments'] as List?) ?? [];
 
+          // Normalize SQL by trimming whitespace for proper detection
+          final normalizedSql = sql.trim().toUpperCase();
+
           // Handle CREATE TABLE
-          if (sql.toUpperCase().startsWith('CREATE TABLE')) {
+          if (normalizedSql.startsWith('CREATE TABLE')) {
             return [];
           }
 
           // Handle INSERT OR REPLACE
-          if (sql.toUpperCase().startsWith('INSERT OR REPLACE')) {
-            final valuesMatch =
-                RegExp(r'VALUES\s*\((.*?)\)', caseSensitive: false)
-                    .firstMatch(sql);
-            if (valuesMatch != null) {
-              final tableMatch =
-                  RegExp(r'INTO\s+([\w_]+)', caseSensitive: false)
-                      .firstMatch(sql);
-              if (tableMatch != null) {
-                final tableName = tableMatch.group(1)!;
-                final columnsMatch =
-                    RegExp(r'\((.*?)\)\s+VALUES', caseSensitive: false)
-                        .firstMatch(sql);
-
-                if (columnsMatch != null) {
-                  final columns = columnsMatch
-                      .group(1)!
-                      .split(',')
-                      .map((c) => c.trim())
-                      .toList();
-                  final data = <String, dynamic>{};
-                  for (var i = 0;
-                      i < columns.length && i < arguments.length;
-                      i++) {
-                    data[columns[i]] = arguments[i];
-                  }
-
-                  // For key-value tables, replace existing key
-                  if (tableName.endsWith('__kv') || tableName == '_global_kv') {
-                    final key = data['key'];
-                    if (key != null) {
-                      _mockKeyValueStore['$tableName:$key'] = data;
-                    }
-                  } else {
-                    _mockDatabase.add(data);
-                  }
-                }
-              }
+          if (normalizedSql.startsWith('INSERT OR REPLACE')) {
+            final tableMatch = RegExp(r'INTO\s+([\w_]+)', caseSensitive: false)
+                .firstMatch(sql);
+            if (tableMatch == null) {
               return [];
             }
-          }
 
-          // Handle SELECT from key-value tables
-          if (sql.toUpperCase().contains('FROM') &&
-              (sql.contains('__kv') || sql.contains('_global_kv'))) {
-            final tableMatch = RegExp(r'FROM\s+([\w_]+)', caseSensitive: false)
-                .firstMatch(sql);
-            final whereMatch =
-                RegExp(r'WHERE\s+key\s*=\s*\?', caseSensitive: false)
+            final tableName = tableMatch.group(1)!;
+
+            final columnsMatch =
+                RegExp(r'\((.*?)\)\s+VALUES', caseSensitive: false)
                     .firstMatch(sql);
-            if (tableMatch != null &&
-                whereMatch != null &&
-                arguments.isNotEmpty) {
-              final tableName = tableMatch.group(1)!;
-              final key = arguments[0];
-              final record = _mockKeyValueStore['$tableName:$key'];
-              return record != null ? [record] : [];
+            if (columnsMatch == null) {
+              return [];
             }
+
+            final columns =
+                columnsMatch.group(1)!.split(',').map((c) => c.trim()).toList();
+
+            final data = <String, dynamic>{};
+            for (var i = 0; i < columns.length && i < arguments.length; i++) {
+              data[columns[i]] = arguments[i];
+            }
+
+            // Check if this is a key-value table
+            final isKVTable =
+                tableName.endsWith('__kv') || tableName == '_global_kv';
+
+            if (isKVTable) {
+              final key = data['key'];
+              if (key != null) {
+                final storeKey = '$tableName:$key';
+                _mockKeyValueStore[storeKey] = data;
+              }
+            } else {
+              _mockDatabaseByTable.putIfAbsent(tableName, () => []).add(data);
+            }
+
             return [];
           }
 
-          // Handle COUNT queries
-          if (sql.toUpperCase().contains('COUNT(*)')) {
-            final filtered = _filterRecords(sql, arguments);
-            return [
-              {'count': filtered.length},
-            ];
+          // Handle SELECT
+          if (normalizedSql.startsWith('SELECT')) {
+            final tableMatch = RegExp(r'FROM\s+([\w_]+)', caseSensitive: false)
+                .firstMatch(sql);
+
+            if (tableMatch != null) {
+              final tableName = tableMatch.group(1)!;
+
+              // Check if this is a key-value table
+              final isKVTable =
+                  tableName.endsWith('__kv') || tableName == '_global_kv';
+
+              if (isKVTable) {
+                final whereMatch =
+                    RegExp(r'WHERE\s+(\w+)\s*=\s*\?', caseSensitive: false)
+                        .firstMatch(sql);
+
+                if (whereMatch != null && arguments.isNotEmpty) {
+                  final columnName = whereMatch.group(1)!;
+                  final searchValue = arguments[0];
+
+                  // Search in key-value store
+                  final results = <Map<String, dynamic>>[];
+                  _mockKeyValueStore.forEach((storeKey, value) {
+                    if (storeKey.startsWith('$tableName:') &&
+                        value is Map<String, dynamic>) {
+                      if (value[columnName] == searchValue) {
+                        results.add(Map<String, dynamic>.from(value));
+                      }
+                    }
+                  });
+
+                  return results;
+                }
+
+                // Return all records from this key-value table
+                final results = <Map<String, dynamic>>[];
+                _mockKeyValueStore.forEach((storeKey, value) {
+                  if (storeKey.startsWith('$tableName:') &&
+                      value is Map<String, dynamic>) {
+                    results.add(Map<String, dynamic>.from(value));
+                  }
+                });
+                return results;
+              }
+
+              // Get records for this specific table
+              final tableRecords = _mockDatabaseByTable[tableName] ?? [];
+
+              // Handle COUNT queries
+              if (normalizedSql.contains('COUNT(*)')) {
+                final filtered = _filterRecords(sql, arguments, tableRecords);
+                return [
+                  {'count': filtered.length},
+                ];
+              }
+
+              // Filter records based on WHERE clause
+              var filtered = _filterRecords(sql, arguments, tableRecords);
+
+              // Handle ORDER BY
+              filtered = _applyOrderBy(sql, filtered);
+
+              // Handle LIMIT and OFFSET
+              filtered = _applyLimitOffset(sql, filtered);
+
+              return filtered.map(Map<String, dynamic>.from).toList();
+            }
           }
 
-          // Filter records based on WHERE clause
-          var filtered = _filterRecords(sql, arguments);
-
-          // Handle ORDER BY
-          filtered = _applyOrderBy(sql, filtered);
-
-          // Handle LIMIT and OFFSET
-          filtered = _applyLimitOffset(sql, filtered);
-
-          return filtered.map(Map<String, dynamic>.from).toList();
+          // Fallback for queries without table name
+          return [];
         case 'update':
           // Handle update with or without WHERE clause
           final sql = args!['sql'] as String;
           final arguments = (args['arguments'] as List?) ?? [];
+
+          // Extract table name
+          final tableMatch = RegExp(r'UPDATE\s+([\w_]+)', caseSensitive: false)
+              .firstMatch(sql);
+          if (tableMatch == null) return 0;
+
+          final tableName = tableMatch.group(1)!;
+          final tableRecords = _mockDatabaseByTable[tableName] ?? [];
 
           // Extract SET values (first N arguments) and WHERE arguments (remaining)
           final setMatch =
@@ -157,8 +203,8 @@ void setupMockPlatformChannels() {
 
             // Filter records (all if no WHERE clause)
             final filtered = sql.toUpperCase().contains('WHERE')
-                ? _filterRecords(sql, whereArguments)
-                : _mockDatabase;
+                ? _filterRecords(sql, whereArguments, tableRecords)
+                : tableRecords;
 
             var updated = 0;
             for (final record in filtered) {
@@ -175,36 +221,56 @@ void setupMockPlatformChannels() {
           final sql = args!['sql'] as String;
           final arguments = (args['arguments'] as List?) ?? [];
 
+          // Extract table name
+          final tableMatch =
+              RegExp(r'FROM\s+([\w_]+)', caseSensitive: false).firstMatch(sql);
+          if (tableMatch == null) return 0;
+
+          final tableName = tableMatch.group(1)!;
+
           // Handle DELETE from key-value tables
-          if (sql.contains('__kv') || sql.contains('_global_kv')) {
-            final tableMatch = RegExp(r'FROM\s+([\w_]+)', caseSensitive: false)
-                .firstMatch(sql);
+          if (tableName.endsWith('__kv') || tableName == '_global_kv') {
             final whereMatch =
-                RegExp(r'WHERE\s+key\s*=\s*\?', caseSensitive: false)
+                RegExp(r'WHERE\s+(\w+)\s*=\s*\?', caseSensitive: false)
                     .firstMatch(sql);
-            if (tableMatch != null &&
-                whereMatch != null &&
-                arguments.isNotEmpty) {
-              final tableName = tableMatch.group(1)!;
-              final key = arguments[0];
-              _mockKeyValueStore.remove('$tableName:$key');
-              return 1;
+            if (whereMatch != null && arguments.isNotEmpty) {
+              final columnName = whereMatch.group(1)!;
+              final searchValue = arguments[0];
+
+              // Find and remove matching keys
+              final keysToRemove = <String>[];
+              _mockKeyValueStore.forEach((storeKey, value) {
+                if (storeKey.startsWith('$tableName:') &&
+                    value is Map<String, dynamic>) {
+                  if (value[columnName] == searchValue) {
+                    keysToRemove.add(storeKey);
+                  }
+                }
+              });
+
+              for (final key in keysToRemove) {
+                _mockKeyValueStore.remove(key);
+              }
+
+              return keysToRemove.length;
             }
             return 0;
           }
 
+          final tableRecords = _mockDatabaseByTable[tableName] ?? [];
+
           if (sql.toUpperCase().contains('WHERE')) {
             // Filter and delete matching records
-            final toDelete = _filterRecords(sql, arguments);
+            final toDelete = _filterRecords(sql, arguments, tableRecords);
             final deleted = toDelete.length;
             for (final record in toDelete) {
-              _mockDatabase.remove(record);
+              tableRecords.remove(record);
             }
             return deleted;
           } else {
             // Delete all
-            final deleted = _mockDatabase.length;
-            _mockDatabase.clear();
+            final deleted = tableRecords.length;
+            tableRecords.clear();
             return deleted;
           }
         case 'executeBatch':
@@ -215,15 +281,18 @@ void setupMockPlatformChannels() {
             final type = operation['type'] as String;
 
             if (type == 'insert') {
+              final tableName = operation['tableName'] as String;
               final data = Map<String, dynamic>.from(operation['data'] as Map);
               final id = _mockInsertId++;
               data['id'] = id;
-              _mockDatabase.add(data);
+              _mockDatabaseByTable.putIfAbsent(tableName, () => []).add(data);
             } else if (type == 'update') {
+              final tableName = operation['tableName'] as String;
               final data = Map<String, dynamic>.from(operation['data'] as Map);
+              final tableRecords = _mockDatabaseByTable[tableName] ?? [];
               // For batch update, we expect the data to contain the ID or WHERE condition
               // Update all matching records
-              for (final record in _mockDatabase) {
+              for (final record in tableRecords) {
                 if (data.containsKey('id') && record['id'] == data['id']) {
                   record.addAll(data);
                 } else if (data.containsKey('username') &&
@@ -236,10 +305,18 @@ void setupMockPlatformChannels() {
               final arguments = (operation['arguments'] as List?) ?? [];
 
               if (sql != null) {
-                // Use SQL-based deletion
-                final toDelete = _filterRecords(sql, arguments);
-                for (final record in toDelete) {
-                  _mockDatabase.remove(record);
+                // Extract table name
+                final tableMatch =
+                    RegExp(r'FROM\s+([\w_]+)', caseSensitive: false)
+                        .firstMatch(sql);
+                if (tableMatch != null) {
+                  final tableName = tableMatch.group(1)!;
+                  final tableRecords = _mockDatabaseByTable[tableName] ?? [];
+                  // Use SQL-based deletion
+                  final toDelete = _filterRecords(sql, arguments, tableRecords);
+                  for (final record in toDelete) {
+                    tableRecords.remove(record);
+                  }
                 }
               }
             }
@@ -253,7 +330,11 @@ void setupMockPlatformChannels() {
             _transactionBuffer = [];
           } else if (action == 'commit') {
             if (_inTransaction) {
-              _mockDatabase.addAll(_transactionBuffer);
+              for (final item in _transactionBuffer) {
+                final tableName = item['table'] as String;
+                final data = item['data'] as Map<String, dynamic>;
+                _mockDatabaseByTable.putIfAbsent(tableName, () => []).add(data);
+              }
               _transactionBuffer = [];
               _inTransaction = false;
             }
@@ -270,7 +351,11 @@ void setupMockPlatformChannels() {
           return null;
         case 'commitTransaction':
           if (_inTransaction) {
-            _mockDatabase.addAll(_transactionBuffer);
+            for (final item in _transactionBuffer) {
+              final tableName = item['table'] as String;
+              final data = item['data'] as Map<String, dynamic>;
+              _mockDatabaseByTable.putIfAbsent(tableName, () => []).add(data);
+            }
             _transactionBuffer = [];
             _inTransaction = false;
           }
@@ -284,9 +369,13 @@ void setupMockPlatformChannels() {
         case 'vacuum':
           return null;
         case 'getStorageInfo':
+          var totalRecords = 0;
+          _mockDatabaseByTable.forEach((_, records) {
+            totalRecords += records.length;
+          });
           return {
-            'recordCount': _mockDatabase.length,
-            'tableCount': 1,
+            'recordCount': totalRecords,
+            'tableCount': _mockDatabaseByTable.length,
             'storageSize': 1024,
           };
         case 'setEncryptionKey':
@@ -331,7 +420,7 @@ void setupMockPlatformChannels() {
 /// Resets mock data between tests.
 void resetMockData() {
   _mockInsertId = 1;
-  _mockDatabase = [];
+  _mockDatabaseByTable = {};
   _mockSecureStorage = {};
   _mockKeyValueStore = {};
   _inTransaction = false;
@@ -339,19 +428,22 @@ void resetMockData() {
 }
 
 /// Sets mock query results for the next query.
-void setMockQueryResults(List<Map<String, dynamic>> results) {
-  _mockDatabase = List<Map<String, dynamic>>.from(results);
+void setMockQueryResults(List<Map<String, dynamic>> results,
+    {String tableName = 'default'}) {
+  _mockDatabaseByTable[tableName] = List<Map<String, dynamic>>.from(results);
 }
 
 /// Gets the current mock insert ID.
 int getMockInsertId() => _mockInsertId - 1;
 
 /// Gets the mock database for inspection.
-List<Map<String, dynamic>> getMockDatabase() => _mockDatabase;
+Map<String, List<Map<String, dynamic>>> getMockDatabase() =>
+    _mockDatabaseByTable;
 
 /// Adds a record to mock database.
-void addMockRecord(Map<String, dynamic> record) {
-  _mockDatabase.add(record);
+void addMockRecord(Map<String, dynamic> record,
+    {String tableName = 'default'}) {
+  _mockDatabaseByTable.putIfAbsent(tableName, () => []).add(record);
 }
 
 /// Sets a key-value pair in mock storage.
@@ -366,19 +458,20 @@ dynamic getMockKeyValue(String key) {
 
 // Private state
 int _mockInsertId = 1;
-List<Map<String, dynamic>> _mockDatabase = [];
+Map<String, List<Map<String, dynamic>>> _mockDatabaseByTable = {};
 Map<String, String> _mockSecureStorage = {};
 Map<String, dynamic> _mockKeyValueStore = {};
 bool _inTransaction = false;
 List<Map<String, dynamic>> _transactionBuffer = [];
 
 /// Filters records based on SQL WHERE clause.
-List<Map<String, dynamic>> _filterRecords(String sql, List<dynamic> arguments) {
+List<Map<String, dynamic>> _filterRecords(
+    String sql, List<dynamic> arguments, List<Map<String, dynamic>> records) {
   final normalizedSql = sql.toUpperCase();
 
   // If no WHERE clause, return all records
   if (!normalizedSql.contains('WHERE')) {
-    return _mockDatabase;
+    return records;
   }
 
   // Extract WHERE clause
@@ -386,12 +479,12 @@ List<Map<String, dynamic>> _filterRecords(String sql, List<dynamic> arguments) {
     r'WHERE\s+(.+?)(?:ORDER|GROUP|LIMIT|OFFSET|$)',
     caseSensitive: false,
   ).firstMatch(sql);
-  if (whereMatch == null) return _mockDatabase;
+  if (whereMatch == null) return records;
 
   final whereClause = whereMatch.group(1)?.trim() ?? '';
 
   // Simple WHERE clause parsing for common cases
-  return _mockDatabase.where((record) {
+  return records.where((record) {
     return _evaluateWhereClause(record, whereClause, arguments);
   }).toList();
 }

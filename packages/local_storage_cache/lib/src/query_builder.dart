@@ -248,11 +248,14 @@ class QueryBuilder {
   String _buildSelectSQL() {
     final buffer = StringBuffer();
 
+    // Get full table name with space prefix
+    final fullTableName = _getFullTableName();
+
     // SELECT clause
     if (_selectedFields.isEmpty) {
-      buffer.write('SELECT * FROM $_tableName');
+      buffer.write('SELECT * FROM $fullTableName');
     } else {
-      buffer.write('SELECT ${_selectedFields.join(', ')} FROM $_tableName');
+      buffer.write('SELECT ${_selectedFields.join(', ')} FROM $fullTableName');
     }
 
     // JOIN clauses
@@ -289,10 +292,18 @@ class QueryBuilder {
     return buffer.toString();
   }
 
+  /// Gets the full table name with space prefix.
+  String _getFullTableName() {
+    // For now, just prefix with space name
+    // In real implementation, this would check if table is global
+    return '${_space}_$_tableName';
+  }
+
   /// Builds the COUNT SQL query.
   String _buildCountSQL() {
+    final fullTableName = _getFullTableName();
     final buffer = StringBuffer()
-      ..write('SELECT COUNT(*) as count FROM $_tableName');
+      ..write('SELECT COUNT(*) as count FROM $fullTableName');
 
     // JOIN clauses
     for (final join in _joins) {
@@ -312,9 +323,10 @@ class QueryBuilder {
 
   /// Builds the UPDATE SQL query.
   String _buildUpdateSQL(Map<String, dynamic> data) {
+    final fullTableName = _getFullTableName();
     final buffer = StringBuffer();
     final fields = data.keys.map((k) => '$k = ?').join(', ');
-    buffer.write('UPDATE $_tableName SET $fields');
+    buffer.write('UPDATE $fullTableName SET $fields');
 
     // WHERE clause
     final whereSQL = _buildWhereSQL();
@@ -327,7 +339,8 @@ class QueryBuilder {
 
   /// Builds the DELETE SQL query.
   String _buildDeleteSQL() {
-    final buffer = StringBuffer()..write('DELETE FROM $_tableName');
+    final fullTableName = _getFullTableName();
+    final buffer = StringBuffer()..write('DELETE FROM $fullTableName');
 
     // WHERE clause
     final whereSQL = _buildWhereSQL();

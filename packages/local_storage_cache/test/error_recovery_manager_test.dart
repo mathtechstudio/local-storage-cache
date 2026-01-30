@@ -62,8 +62,8 @@ void main() {
     test('executeWithRetry fails after max retries', () async {
       var callCount = 0;
 
-      expect(
-        () async => recoveryManager.executeWithRetry(() async {
+      await expectLater(
+        recoveryManager.executeWithRetry(() async {
           callCount++;
           throw DatabaseException(
             'Database locked',
