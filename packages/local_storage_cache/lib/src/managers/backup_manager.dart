@@ -209,7 +209,7 @@ class BackupManager {
     final tables = await _platform.query(tablesQuery, [], '');
 
     var progress = 0.2;
-    final progressStep = 0.6 / tables.length;
+    final progressStep = tables.isNotEmpty ? 0.6 / tables.length : 0.0;
 
     for (final table in tables) {
       final tableName = table['name'] as String;
