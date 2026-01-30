@@ -29,9 +29,10 @@ void main() {
     });
 
     test('should initialize with custom key', () async {
+      // ggignore: test-key-not-real
       const config = EncryptionConfig(
         enabled: true,
-        customKey: 'my-custom-key-12345',
+        customKey: 'test-key-for-unit-tests-only-12345',
       );
       final manager = EncryptionManager(config);
       final platform = LocalStorageCachePlatform.instance;
@@ -39,7 +40,8 @@ void main() {
       await manager.initialize(platform);
 
       // Should use custom key
-      expect(manager.config.customKey, equals('my-custom-key-12345'));
+      expect(manager.config.customKey,
+          equals('test-key-for-unit-tests-only-12345'));
     });
 
     test('should generate and save key to secure storage', () async {
@@ -60,8 +62,10 @@ void main() {
     test('should load existing key from secure storage', () async {
       final platform = LocalStorageCachePlatform.instance;
 
+      // ggignore: test-key-not-real
       // Save a key first
-      await platform.saveSecureKey('encryption_key', 'existing-key-123');
+      await platform.saveSecureKey(
+          'encryption_key', 'mock-existing-key-for-testing-123');
 
       const config = EncryptionConfig(
         enabled: true,
@@ -72,7 +76,7 @@ void main() {
 
       // Should load the existing key
       final loadedKey = await platform.getSecureKey('encryption_key');
-      expect(loadedKey, equals('existing-key-123'));
+      expect(loadedKey, equals('mock-existing-key-for-testing-123'));
     });
 
     test('should throw StateError when not initialized', () async {
@@ -226,10 +230,11 @@ void main() {
     });
 
     test('should encrypt specific fields in data map', () async {
+      // ggignore: test-password-not-real
       final data = {
         'username': 'john_doe',
         'email': 'john@example.com',
-        'password': 'secret123',
+        'password': 'test-password-not-real-123',
         'age': 30,
       };
 
@@ -240,15 +245,17 @@ void main() {
 
       expect(encrypted['username'], equals('john_doe'));
       expect(encrypted['age'], equals(30));
-      expect(encrypted['password'], isNot(equals('secret123')));
+      expect(
+          encrypted['password'], isNot(equals('test-password-not-real-123')));
       expect(encrypted['email'], isNot(equals('john@example.com')));
     });
 
     test('should decrypt specific fields in data map', () async {
+      // ggignore: test-password-not-real
       final data = {
         'username': 'john_doe',
         'email': 'john@example.com',
-        'password': 'secret123',
+        'password': 'test-password-not-real-123',
       };
 
       final encrypted = await manager.encryptFields(
@@ -262,15 +269,16 @@ void main() {
       );
 
       expect(decrypted['username'], equals('john_doe'));
-      expect(decrypted['password'], equals('secret123'));
+      expect(decrypted['password'], equals('test-password-not-real-123'));
       expect(decrypted['email'], equals('john@example.com'));
     });
 
     test('should handle null values in fields', () async {
+      // ggignore: test-password-not-real
       final data = {
         'username': 'john_doe',
         'email': null,
-        'password': 'secret123',
+        'password': 'test-password-not-real-123',
       };
 
       final encrypted = await manager.encryptFields(
@@ -279,13 +287,15 @@ void main() {
       );
 
       expect(encrypted['email'], isNull);
-      expect(encrypted['password'], isNot(equals('secret123')));
+      expect(
+          encrypted['password'], isNot(equals('test-password-not-real-123')));
     });
 
     test('should handle missing fields', () async {
+      // ggignore: test-password-not-real
       final data = {
         'username': 'john_doe',
-        'password': 'secret123',
+        'password': 'test-password-not-real-123',
       };
 
       final encrypted = await manager.encryptFields(
@@ -294,15 +304,17 @@ void main() {
       );
 
       expect(encrypted['username'], equals('john_doe'));
-      expect(encrypted['password'], isNot(equals('secret123')));
+      expect(
+          encrypted['password'], isNot(equals('test-password-not-real-123')));
       expect(encrypted.containsKey('email'), isFalse);
       expect(encrypted.containsKey('phone'), isFalse);
     });
 
     test('should handle empty fields list', () async {
+      // ggignore: test-password-not-real
       final data = {
         'username': 'john_doe',
-        'password': 'secret123',
+        'password': 'test-password-not-real-123',
       };
 
       final encrypted = await manager.encryptFields(data, []);
@@ -353,7 +365,8 @@ void main() {
     });
 
     test('should set new encryption key', () async {
-      const newKey = 'new-encryption-key-456';
+      // ggignore: test-key-not-real
+      const newKey = 'test-new-encryption-key-for-testing-456';
 
       await manager.setEncryptionKey(newKey);
 
@@ -374,8 +387,9 @@ void main() {
     });
 
     test('should save custom key securely', () async {
+      // ggignore: test-key-not-real
       const keyId = 'custom_key_1';
-      const keyValue = 'my-custom-key-value';
+      const keyValue = 'test-custom-key-value-for-unit-tests';
 
       await manager.saveKeySecurely(keyId, keyValue);
 
@@ -411,6 +425,7 @@ void main() {
     });
 
     test('should return plain text when encryption is disabled', () async {
+      // ggignore: test-data-not-sensitive
       const plainText = 'Hello, World!';
 
       final encrypted = await manager.encrypt(plainText);
@@ -421,9 +436,10 @@ void main() {
     });
 
     test('should not encrypt fields when disabled', () async {
+      // ggignore: test-password-not-real
       final data = {
         'username': 'john_doe',
-        'password': 'secret123',
+        'password': 'test-password-not-real-123',
       };
 
       final encrypted = await manager.encryptFields(data, ['password']);
