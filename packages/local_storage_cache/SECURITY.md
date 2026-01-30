@@ -169,14 +169,14 @@ Implement regular key rotation:
 
 ```dart
 // Rotate encryption key periodically
-Future<void> rotateKey() async {
-  final newKey = generateSecureKey();
-  await storage.rotateEncryptionKey(newKey);
+Future<void> rotateEncryptionKey() async {
+  final encryptionManager = storage.encryptionManager;
+  await encryptionManager.rotateKey();
 }
 
 // Schedule rotation
 Timer.periodic(const Duration(days: 90), (_) {
-  rotateKey();
+  rotateEncryptionKey();
 });
 ```
 
@@ -738,9 +738,3 @@ Future<SecurityAuditReport> performSecurityAudit() async {
 - [OWASP Mobile Security](https://owasp.org/www-project-mobile-security/)
 - [NIST Cryptographic Standards](https://csrc.nist.gov/projects/cryptographic-standards-and-guidelines)
 - [Flutter Security Best Practices](https://flutter.dev/docs/deployment/security)
-
-## Next Steps
-
-- Review [PERFORMANCE.md](./PERFORMANCE.md) for optimization strategies
-- Check [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues
-- See [ADVANCED_USAGE.md](./ADVANCED_USAGE.md) for advanced features
