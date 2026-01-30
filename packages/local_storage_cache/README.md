@@ -213,13 +213,13 @@ await storage.batchInsert('users', users);
 #### Transactions
 
 ```dart
-await storage.transaction((txn) async {
-  final userId = await txn.insert('users', {
+await storage.transaction(() async {
+  final userId = await storage.insert('users', {
     'username': 'john_doe',
     'email': 'john@example.com',
   });
   
-  await txn.insert('profiles', {
+  await storage.insert('profiles', {
     'user_id': userId,
     'bio': 'Software developer',
   });
