@@ -30,9 +30,6 @@ class MemoryCache {
   /// Maps frequency count to set of keys with that frequency.
   final Map<int, Set<String>> _frequencyMap = {};
 
-  /// Minimum frequency for LFU.
-  int _minFrequency = 0;
-
   /// Gets a value from cache.
   T? get<T>(String key) {
     final entry = _cache[key];
@@ -97,7 +94,6 @@ class MemoryCache {
     // Update LFU frequency map (new entries start at frequency 0)
     if (evictionPolicy == EvictionPolicy.lfu) {
       _frequencyMap.putIfAbsent(0, () => {}).add(key);
-      _minFrequency = 0;
     }
   }
 
