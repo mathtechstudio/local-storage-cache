@@ -46,7 +46,7 @@ class DiskCache {
     _ensureInitialized();
 
     final file = _getFile(key);
-    if (!file.existsSync()) return null;
+    if (!await file.exists()) return null;
 
     try {
       final content = await file.readAsString();
