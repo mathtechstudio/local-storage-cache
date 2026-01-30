@@ -19,7 +19,7 @@ permissions:
   pull-requests: read
 
 jobs:
-  close-inactive-issues:
+  close_inactive_issues:
     name: Close Inactive Issues
     runs-on: ubuntu-latest
 
