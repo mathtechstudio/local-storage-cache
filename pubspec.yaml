@@ -1,46 +1,73 @@
-name: local_storage_cache
-description: A comprehensive Flutter package for managing local storage and caching with advanced features like encryption, TTL (Time-To-Live), and backup/restore capabilities.
-version: 1.0.0
-homepage: https://github.com/protheeuz/local-storage-cache.git
+name: local_storage_cache_root
+description: Monorepo workspace for local_storage_cache packages
+publish_to: none
 
 environment:
-  sdk: '>=3.4.3 <4.0.0'
-  flutter: ">=1.17.0"
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: ">=3.0.0"
 
-dependencies:
-  encrypt: ^5.0.3
-  flutter:
-    sdk: flutter
-  path: ^1.9.0
-  path_provider: ^2.1.3
-  shared_preferences: ^2.2.3
-  sqflite: ^2.3.3+1
-  sqflite_common_ffi: ^2.3.3
+workspace:
+  - packages/local_storage_cache
+  - packages/local_storage_cache_platform_interface
+  - packages/local_storage_cache_android
+  - packages/local_storage_cache_ios
+  - packages/local_storage_cache_macos
+  - packages/local_storage_cache_windows
+  - packages/local_storage_cache_linux
+  - packages/local_storage_cache_web
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^3.0.0
+  melos: ^7.0.0
+  very_good_analysis: ^6.0.0
 
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-flutter:
-  uses-material-design: true
-
-  # assets:
-  #   - assets/
-
-plugin:
-  platforms:
-    android:
-      pluginClass: LocalStorageCachePlugin
-    ios:
-      pluginClass: LocalStorageCachePlugin
-    web:
-      pluginClass: LocalStorageCachePlugin
-    macos:
-      pluginClass: LocalStorageCachePlugin
-    windows:
-      pluginClass: LocalStorageCachePlugin
-    linux:
-      pluginClass: LocalStorageCachePlugin
+melos:
+  name: local_storage_cache
+  
+  scripts:
+    analyze:
+      description: Analyze all packages
+      run: melos exec -- flutter analyze
+      
+    format:
+      description: Format all packages
+      run: melos exec -- dart format .
+      
+    format:check:
+      description: Check formatting of all packages
+      run: melos exec -- dart format --set-exit-if-changed .
+      
+    test:
+      description: Run tests in all packages
+      run: melos exec --fail-fast -- flutter test
+      
+    test:coverage:
+      description: Run tests with coverage in all packages
+      run: melos exec --fail-fast -- flutter test --coverage
+      
+    clean:
+      description: Clean all packages
+      run: melos exec -- flutter clean
+      
+    get:
+      description: Get dependencies for all packages
+      run: melos exec -- flutter pub get
+      
+    upgrade:
+      description: Upgrade dependencies for all packages
+      run: melos exec -- flutter pub upgrade
+      
+    build:android:
+      description: Build Android example app
+      run: melos exec --scope="local_storage_cache" -- flutter build apk
+      
+    build:ios:
+      description: Build iOS example app
+      run: melos exec --scope="local_storage_cache" -- flutter build ios --no-codesign
+      
+    version:
+      description: Version packages and generate changelogs
+      run: melos version --all
+      
+    publish:
+      description: Publish packages to pub.dev
+      run: melos publish --no-dry-run

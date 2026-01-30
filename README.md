@@ -1,118 +1,296 @@
-# Local Storage Cache - Flutter
+# local_storage_cache
 
-A comprehensive Flutter package for managing local storage and caching with advanced features like encryption, TTL (Time-To-Live), and backup/restore capabilities.
+[![Pub Version](https://img.shields.io/pub/v/local_storage_cache.svg)](https://pub.dev/packages/local_storage_cache)
+[![Build Status](https://github.com/protheeuz/local-storage-cache/actions/workflows/code-integration.yml/badge.svg)](https://github.com/protheeuz/local-storage-cache/actions/workflows/code-integration.yml)
+[![Code Coverage](https://codecov.io/gh/protheeuz/local-storage-cache/graph/badge.svg)](https://codecov.io/gh/protheeuz/local-storage-cache)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+A comprehensive Flutter package for local storage and caching with advanced features including encryption, multi-space architecture, automatic schema migration, and high-performance query capabilities. Supports Android, iOS, macOS, Windows, Linux, and Web.
 
 ## Features
 
-- **Data Storage**: Save and retrieve data of various types (String, int, bool, double, JSON) using shared preferences.
-- **Encryption**: Automatically encrypt data before saving and decrypt upon retrieval to ensure security.
-- **Cache Management**: Cache data with optional TTL (Time-To-Live) using SQLite, enabling temporary storage of data that expires after a set duration.
-- **Data Removal**: Remove specific data or clear all data from both local storage and cache.
-- **Backup and Restore**: Backup and restore data for both local storage and cache, allowing for easy data migration and recovery.
-- **Expiration Notification**: Callback function to notify when cached data expires.
+- **Multi-Platform Support**: Works seamlessly across Android, iOS, macOS, Windows, Linux, and Web
+- **Advanced Query System**: SQL-like queries with chaining, nesting, joins, and complex conditions
+- **Multi-Space Architecture**: Isolate data for different users or contexts within a single database
+- **Strong Encryption**: AES-256-GCM and ChaCha20-Poly1305 with platform-native secure key storage
+- **Automatic Schema Migration**: Zero-downtime migrations with intelligent field rename detection
+- **High Performance**: Multi-level caching, batch operations, connection pooling, and prepared statements
+- **Backup and Restore**: Full and selective backups with compression and encryption support
+- **Data Validation**: Field-level validation with custom validators and constraints
+- **Monitoring**: Built-in metrics, event streams, and performance tracking
+- **Error Recovery**: Automatic retry with exponential backoff and corruption recovery
 
 ## Installation
 
-Add this to your package's `pubspec.yaml` file:
+Add the dependency in your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  local_storage_cache:
-    git:
-      url: https://github.com/protheeuz/local_storage_cache.git
-      ref: main
+  local_storage_cache: ^2.0.0
 ```
 
-### Usage
+Then run:
 
-## Local Storage
+```bash
+flutter pub get
+```
+
+## Quick Start
+
 ```dart
 import 'package:local_storage_cache/local_storage_cache.dart';
 
-final localStorage = LocalStorage();
+// Define your schema
+final userSchema = TableSchema(
+  name: 'users',
+  fields: [
+    FieldSchema(name: 'username', type: DataType.text, nullable: false, unique: true),
+    FieldSchema(name: 'email', type: DataType.text, nullable: false),
+    FieldSchema(name: 'created_at', type: DataType.datetime, nullable: false),
+  ],
+  primaryKeyConfig: const PrimaryKeyConfig(
+    name: 'id',
+    type: PrimaryKeyType.autoIncrement,
+  ),
+  indexes: [IndexSchema(name: 'idx_username', fields: ['username'])],
+);
 
-// Save data
-await localStorage.saveString('key1', 'value1');
+// Initialize storage
+final storage = StorageEngine(
+  config: StorageConfig(
+    databaseName: 'my_app.db',
+    encryption: EncryptionConfig(enabled: true),
+  ),
+  schemas: [userSchema],
+);
 
-// Retrieve data
-final value = await localStorage.getString('key1');
-print(value); // Output: value1
+await storage.initialize();
 
-// Save other types of data
-await localStorage.saveInt('key2', 123);
-await localStorage.saveBool('key3', true);
-await localStorage.saveDouble('key4', 1.23);
-await localStorage.saveJson('key5', {'field': 'value'});
-
-// Retrieve other types of data
-final intValue = await localStorage.getInt('key2');
-final boolValue = await localStorage.getBool('key3');
-final doubleValue = await localStorage.getDouble('key4');
-final jsonValue = await localStorage.getJson('key5');
-
-// Remove data
-await localStorage.removeData('key1');
-
-// Clear all data
-await localStorage.clearAll();
-```
-## Cache Manager
-```dart
-import 'package:local_storage_cache/local_storage_cache.dart';
-
-final cacheManager = CacheManager(expirationCallback: (key) {
-  print('Cache expired for key: $key');
+// Insert data
+final userId = await storage.insert('users', {
+  'username': 'john_doe',
+  'email': 'john@example.com',
+  'created_at': DateTime.now().toIso8601String(),
 });
 
-// Save cache
-await cacheManager.saveCache('key1', 'value1');
+// Query data
+final users = await storage.query('users')
+  .where('username', '=', 'john_doe')
+  .get();
 
-// Retrieve cache
-final value = await cacheManager.getCache('key1');
-print(value); // Output: value1
+// Update data
+await storage.update(
+  'users',
+  {'email': 'newemail@example.com'},
+  where: 'id = ?',
+  whereArgs: [userId],
+);
 
-// Save cache with TTL
-await cacheManager.saveCache('key2', 'value2', ttl: Duration(seconds: 5));
-
-// Retrieve cache before expiration
-final valueBeforeExpiration = await cacheManager.getCache('key2');
-print(valueBeforeExpiration); // Output: value2
-
-// Wait for TTL to expire
-await Future.delayed(Duration(seconds: 6));
-
-// Retrieve cache after expiration
-final valueAfterExpiration = await cacheManager.getCache('key2');
-print(valueAfterExpiration); // Output: null
-
-// Remove cache
-await cacheManager.removeCache('key1');
-
-// Clear all cache
-await cacheManager.clearAll();
-
-// Backup cache
-await cacheManager.backupCache('/path/to/backup.json');
-
-// Restore cache
-await cacheManager.restoreCache('/path/to/backup.json');
+// Delete data
+await storage.delete('users', where: 'id = ?', whereArgs: [userId]);
 ```
 
-### Additional Notes
-Make sure to replace `/path/to/backup.json` with the appropriate path in your file system when using the backup and restore functions. You can also add more examples and documentation based on the additional features implemented if needed.
+## Platform Requirements
 
-## Explanation
-- General Description: A comprehensive Flutter package for managing local storage and caching with advanced features like encryption, TTL (Time-To-Live), and backup/restore capabilities.
-**Key Features:**
-- Data Storage: Save and retrieve data of various types (String, int, bool, double, JSON) using shared preferences.
-- Encryption: Automatically encrypt data before saving and decrypt upon retrieval to ensure security.
-- Cache Management: Cache data with optional TTL (Time-To-Live) using SQLite, enabling temporary storage of data that expires after a set duration.
-- Data Removal: Remove specific data or clear all data from both local storage and cache.
-- Backup and Restore: Backup and restore data for both local storage and cache, allowing for easy data migration and recovery.
-- Expiration Notification: Callback function to notify when cached data expires.
+| Platform | Minimum Version | Notes                       |
+| -------- | --------------- | --------------------------- |
+| Android  | API 21 (5.0+)   | Requires SQLite 3.8.0+      |
+| iOS      | 12.0+           | Uses SQLite.swift           |
+| macOS    | 10.14+          | Uses SQLite.swift           |
+| Windows  | 10+             | Requires Visual C++ Runtime |
+| Linux    | Ubuntu 18.04+   | Requires libsqlite3         |
+| Web      | Modern browsers | Uses IndexedDB              |
 
-**Installation Instructions:** Add the package to your pubspec.yaml file and run flutter pub get to install it.
-**Usage Examples:**
-- For LocalStorage: Includes examples for saving, retrieving, removing, and backing up/restoring data.
-- For CacheManager: Includes examples for saving with TTL, retrieving, removing, and backing up/restoring cached data.
-**Additional Notes:** Replace /path/to/backup.json with the appropriate path in your file system when using the backup and restore functions. You can also add more examples and documentation based on the additional features implemented if needed.
+## Advanced Features
+
+### Multi-Space Architecture
+
+Isolate data for different users or contexts:
+
+```dart
+await storage.createSpace('user_123');
+await storage.switchSpace('user_123');
+
+// All operations now work within this space
+await storage.insert('notes', {
+  'title': 'My Note',
+  'content': 'Note content',
+});
+```
+
+### Encryption
+
+```dart
+final storage = StorageEngine(
+  config: StorageConfig(
+    databaseName: 'my_app.db',
+    encryption: EncryptionConfig(
+      enabled: true,
+      algorithm: EncryptionAlgorithm.aes256GCM,
+      useSecureStorage: true,
+    ),
+  ),
+  schemas: [userSchema],
+);
+```
+
+### Batch Operations
+
+```dart
+final users = [
+  {'username': 'user1', 'email': 'user1@example.com'},
+  {'username': 'user2', 'email': 'user2@example.com'},
+  {'username': 'user3', 'email': 'user3@example.com'},
+];
+
+await storage.batchInsert('users', users);
+```
+
+### Transactions
+
+```dart
+await storage.transaction((txn) async {
+  final userId = await txn.insert('users', {
+    'username': 'john_doe',
+    'email': 'john@example.com',
+  });
+  
+  await txn.insert('profiles', {
+    'user_id': userId,
+    'bio': 'Software developer',
+  });
+});
+```
+
+### Backup and Restore
+
+```dart
+// Create a backup
+await storage.backup(BackupConfig(
+  path: '/path/to/backup.db',
+  compress: true,
+  encrypt: true,
+));
+
+// Restore from backup
+await storage.restore(RestoreConfig(
+  path: '/path/to/backup.db',
+  decrypt: true,
+));
+```
+
+## Package Structure
+
+This repository is organized as a monorepo using Melos:
+
+- `packages/local_storage_cache` - Main package with core functionality
+- `packages/local_storage_cache_platform_interface` - Platform interface definitions
+- `packages/local_storage_cache_android` - Android implementation
+- `packages/local_storage_cache_ios` - iOS implementation
+- `packages/local_storage_cache_macos` - macOS implementation
+- `packages/local_storage_cache_windows` - Windows implementation
+- `packages/local_storage_cache_linux` - Linux implementation
+- `packages/local_storage_cache_web` - Web implementation
+
+## Documentation
+
+- [Main Package Documentation](packages/local_storage_cache/README.md)
+- [API Reference](https://pub.dev/documentation/local_storage_cache/latest/)
+- [Examples](packages/local_storage_cache/example)
+- [Changelog](CHANGELOG.md)
+
+## Examples
+
+Complete working examples are available in the [example](packages/local_storage_cache/example) directory:
+
+- Basic Usage
+- Advanced Queries
+- Encryption
+- Multi-Space Architecture
+- Backup and Restore
+
+## Contributing
+
+Contributions are welcome. To set up your development environment:
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/protheeuz/local-storage-cache.git
+   cd local-storage-cache
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   flutter pub get
+   ```
+
+3. Activate Melos:
+
+   ```bash
+   dart pub global activate melos
+   ```
+
+4. Bootstrap the workspace:
+
+   ```bash
+   melos bootstrap
+   ```
+
+5. Run tests:
+
+   ```bash
+   melos test
+   ```
+
+6. Run static analysis:
+
+   ```bash
+   melos analyze
+   ```
+
+7. Format code:
+
+   ```bash
+   melos format
+   ```
+
+Please read the [contributing guidelines](CONTRIBUTING.md) before submitting pull requests.
+
+## Development Commands
+
+This project uses Melos for managing the monorepo:
+
+```bash
+# Bootstrap all packages
+melos bootstrap
+
+# Run tests for all packages
+melos test
+
+# Run static analysis
+melos analyze
+
+# Format all code
+melos format
+
+# Clean all packages
+melos clean
+
+# Publish packages (maintainers only)
+melos publish
+```
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Support
+
+- Report issues on [GitHub Issues](https://github.com/protheeuz/local-storage-cache/issues)
+- View the [CHANGELOG](CHANGELOG.md) for version history
+
+## Acknowledgments
+
+This package uses SQLite for local storage and implements platform-specific secure storage mechanisms for encryption key management.

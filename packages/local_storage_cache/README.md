@@ -1,0 +1,702 @@
+# local_storage_cache
+
+[![Pub Version](https://img.shields.io/pub/v/local_storage_cache.svg)](https://pub.dev/packages/local_storage_cache)
+[![Build Status](https://github.com/protheeuz/local-storage-cache/actions/workflows/code-integration.yml/badge.svg)](https://github.com/protheeuz/local-storage-cache/actions/workflows/code-integration.yml)
+[![Code Coverage](https://codecov.io/gh/protheeuz/local-storage-cache/graph/badge.svg)](https://codecov.io/gh/protheeuz/local-storage-cache)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+A comprehensive Flutter package for local storage and caching with advanced features including encryption, multi-space architecture, automatic schema migration, and high-performance query capabilities. Supports Android, iOS, macOS, Windows, Linux, and Web.
+
+## Features
+
+- **Multi-Platform Support**: Works seamlessly across Android, iOS, macOS, Windows, Linux, and Web
+- **Advanced Query System**: SQL-like queries with chaining, nesting, joins, and complex conditions
+- **Multi-Space Architecture**: Isolate data for different users or contexts within a single database
+- **Strong Encryption**: AES-256-GCM and ChaCha20-Poly1305 with platform-native secure key storage
+- **Automatic Schema Migration**: Zero-downtime migrations with intelligent field rename detection
+- **High Performance**: Multi-level caching, batch operations, connection pooling, and prepared statements
+- **Backup and Restore**: Full and selective backups with compression and encryption support
+- **Data Validation**: Field-level validation with custom validators and constraints
+- **Monitoring**: Built-in metrics, event streams, and performance tracking
+- **Error Recovery**: Automatic retry with exponential backoff and corruption recovery
+
+## Installation
+
+Add the dependency in your `pubspec.yaml` file:
+
+```yaml
+dependencies:
+  local_storage_cache: ^2.0.0
+```
+
+Then run:
+
+```bash
+flutter pub get
+```
+
+## Platform Requirements
+
+| Platform | Minimum Version | Notes |
+|----------|----------------|-------|
+| Android  | API 21 (5.0+)  | Requires SQLite 3.8.0+ |
+| iOS      | 12.0+          | Uses SQLite.swift |
+| macOS    | 10.14+         | Uses SQLite.swift |
+| Windows  | 10+            | Requires Visual C++ Runtime |
+| Linux    | Ubuntu 18.04+  | Requires libsqlite3 |
+| Web      | Modern browsers | Uses IndexedDB |
+
+## Usage
+
+### Import the Package
+
+```dart
+import 'package:local_storage_cache/local_storage_cache.dart';
+```
+
+### Define Your Schema
+
+```dart
+final userSchema = TableSchema(
+  name: 'users',
+  fields: [
+    FieldSchema(
+      name: 'username',
+      type: DataType.text,
+      nullable: false,
+      unique: true,
+    ),
+    FieldSchema(
+      name: 'email',
+      type: DataType.text,
+      nullable: false,
+    ),
+    FieldSchema(
+      name: 'created_at',
+      type: DataType.datetime,
+      nullable: false,
+    ),
+  ],
+  primaryKeyConfig: const PrimaryKeyConfig(
+    name: 'id',
+    type: PrimaryKeyType.autoIncrement,
+  ),
+  indexes: [
+    IndexSchema(
+      name: 'idx_username',
+      fields: ['username'],
+    ),
+  ],
+);
+```
+
+### Initialize Storage
+
+```dart
+// Basic initialization
+final storage = StorageEngine(
+  config: StorageConfig(
+    databaseName: 'my_app.db',
+  ),
+  schemas: [userSchema],
+);
+
+await storage.initialize();
+
+// With encryption enabled
+final storage = StorageEngine(
+  config: StorageConfig(
+    databaseName: 'my_app.db',
+    encryption: EncryptionConfig(
+      enabled: true,
+      algorithm: EncryptionAlgorithm.aes256GCM,
+      useSecureStorage: true,
+    ),
+  ),
+  schemas: [userSchema],
+);
+
+await storage.initialize();
+```
+
+### Basic Operations
+
+#### Insert Data
+
+```dart
+final userId = await storage.insert('users', {
+  'username': 'john_doe',
+  'email': 'john@example.com',
+  'created_at': DateTime.now().toIso8601String(),
+});
+```
+
+#### Query Data
+
+```dart
+// Simple query
+final users = await storage.query('users')
+  .where('username', '=', 'john_doe')
+  .get();
+
+// Complex query with multiple conditions
+final activeUsers = await storage.query('users')
+  .where('status', '=', 'active')
+  .where('created_at', '>', DateTime.now().subtract(Duration(days: 30)))
+  .orderBy('username', ascending: true)
+  .limit(10)
+  .get();
+
+// Query with joins
+final postsWithAuthors = await storage.query('posts')
+  .join('users', 'posts.user_id', '=', 'users.id')
+  .select(['posts.*', 'users.username'])
+  .get();
+```
+
+#### Update Data
+
+```dart
+// Update using query builder
+await storage.query('users')
+  .where('id', '=', userId)
+  .update({'email': 'newemail@example.com'});
+```
+
+#### Delete Data
+
+```dart
+// Delete using query builder
+await storage.query('users')
+  .where('id', '=', userId)
+  .delete();
+```
+
+### Advanced Features
+
+#### Multi-Space Architecture
+
+Isolate data for different users or contexts:
+
+```dart
+// Switch to a space for a specific user
+await storage.switchSpace(spaceName: 'user_123');
+
+// All operations now work within this space
+await storage.insert('notes', {
+  'title': 'My Note',
+  'content': 'Note content',
+});
+
+// Switch back to default space
+await storage.switchSpace(spaceName: 'default');
+
+// Get current space name
+final currentSpace = storage.currentSpace;
+```
+
+#### Batch Operations
+
+```dart
+final users = [
+  {'username': 'user1', 'email': 'user1@example.com'},
+  {'username': 'user2', 'email': 'user2@example.com'},
+  {'username': 'user3', 'email': 'user3@example.com'},
+];
+
+await storage.batchInsert('users', users);
+```
+
+#### Transactions
+
+```dart
+await storage.transaction(() async {
+  final userId = await storage.insert('users', {
+    'username': 'john_doe',
+    'email': 'john@example.com',
+  });
+  
+  await storage.insert('profiles', {
+    'user_id': userId,
+    'bio': 'Software developer',
+  });
+});
+```
+
+#### Streaming Large Datasets
+
+For memory-efficient processing of large datasets:
+
+```dart
+// Stream records one at a time
+await for (final record in storage.streamQuery('large_table')) {
+  await processRecord(record);
+}
+
+// Or use query builder
+await for (final record in storage.query('logs').stream()) {
+  print(record);
+}
+```
+
+#### Event Monitoring
+
+```dart
+// Listen to storage events
+storage.eventManager.stream.listen((event) {
+  print('Event: ${event.type} on table: ${event.tableName}');
+});
+
+// Get storage statistics
+final stats = await storage.getStats();
+print('Storage size: ${stats.storageSize} bytes');
+print('Record count: ${stats.recordCount}');
+print('Table count: ${stats.tableCount}');
+
+// Get performance metrics
+final metrics = storage.metricsManager.getMetrics();
+print('Total queries: ${metrics.totalQueries}');
+print('Average query time: ${metrics.averageQueryTime}ms');
+```
+
+#### Database Maintenance
+
+```dart
+// Reclaim unused space
+await storage.vacuum();
+
+// Export database
+await storage.exportDatabase('/path/to/export.db');
+
+// Import database
+await storage.importDatabase('/path/to/import.db');
+```
+
+## Configuration
+
+### Storage Configuration
+
+```dart
+final config = StorageConfig(
+  databaseName: 'my_app.db',
+  databasePath: '/custom/path',
+  version: 1,
+  encryption: EncryptionConfig(
+    enabled: true,
+    algorithm: EncryptionAlgorithm.aes256GCM,
+    useSecureStorage: true,
+  ),
+  cache: CacheConfig(
+    maxMemoryCacheSize: 100,
+    maxDiskCacheSize: 1000,
+    defaultTTL: Duration(hours: 1),
+    evictionPolicy: EvictionPolicy.lru,
+    enableQueryCache: true,
+    enableWarmCache: false,
+  ),
+  performance: PerformanceConfig(
+    connectionPoolSize: 5,
+    enablePreparedStatements: true,
+    enableQueryOptimization: true,
+    enableBatchOptimization: true,
+    batchSize: 100,
+  ),
+  logging: LogConfig(
+    level: LogLevel.info,
+    logQueries: false,
+    logPerformance: false,
+  ),
+  enableAutoBackup: false,
+  enableMetrics: true,
+  enableEventStream: true,
+);
+```
+
+### Encryption Configuration
+
+```dart
+// AES-256-GCM (recommended)
+final encryptionConfig = EncryptionConfig(
+  enabled: true,
+  algorithm: EncryptionAlgorithm.aes256GCM,
+  useSecureStorage: true,
+);
+
+// ChaCha20-Poly1305
+final encryptionConfig = EncryptionConfig(
+  enabled: true,
+  algorithm: EncryptionAlgorithm.chacha20Poly1305,
+  useSecureStorage: true,
+);
+
+// Custom key (not recommended for production)
+final encryptionConfig = EncryptionConfig(
+  enabled: true,
+  algorithm: EncryptionAlgorithm.aes256GCM,
+  customKey: 'your-custom-key',
+);
+```
+
+### Cache Configuration
+
+```dart
+final cacheConfig = CacheConfig(
+  maxMemoryCacheSize: 100,
+  maxDiskCacheSize: 1000,
+  defaultTTL: Duration(hours: 1),
+  evictionPolicy: EvictionPolicy.lru,
+  enableQueryCache: true,
+  enableWarmCache: false,
+);
+```
+
+## Platform-Specific Configuration
+
+### Android
+
+No additional configuration required. The package uses SQLite through the Android NDK.
+
+#### Disabling Auto Backup
+
+To prevent issues with encryption keys, disable Android auto backup by adding the following to your `android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<application
+  android:allowBackup="false"
+  ...>
+</application>
+```
+
+### iOS and macOS
+
+Add Keychain Sharing capability to your runner. Add the following to both `ios/Runner/DebugProfile.entitlements` and `ios/Runner/Release.entitlements` for iOS, or `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements` for macOS:
+
+```xml
+<key>keychain-access-groups</key>
+<array/>
+```
+
+If using App Groups, add the App Group name:
+
+```xml
+<key>keychain-access-groups</key>
+<array>
+  <string>$(AppIdentifierPrefix)your-app-group</string>
+</array>
+```
+
+### Windows
+
+Requires Visual C++ Runtime. The package uses SQLite through the Windows SDK.
+
+### Linux
+
+Requires `libsqlite3-0` to run the application. Install it using:
+
+```bash
+sudo apt-get install libsqlite3-0
+```
+
+For development, you also need `libsqlite3-dev`:
+
+```bash
+sudo apt-get install libsqlite3-dev
+```
+
+### Web
+
+The package uses IndexedDB for storage on web platforms. Encryption is supported through WebCrypto API.
+
+**Important**: The package only works on HTTPS or localhost environments for security reasons.
+
+## Schema Definition
+
+The package uses strongly-typed schemas to define your data structure:
+
+```dart
+final userSchema = TableSchema(
+  name: 'users',
+  fields: [
+    FieldSchema(
+      name: 'username',
+      type: DataType.text,
+      nullable: false,
+      unique: true,
+    ),
+    FieldSchema(
+      name: 'email',
+      type: DataType.text,
+      nullable: false,
+    ),
+    FieldSchema(
+      name: 'age',
+      type: DataType.integer,
+      nullable: true,
+    ),
+    FieldSchema(
+      name: 'created_at',
+      type: DataType.datetime,
+      nullable: false,
+      defaultValue: 'CURRENT_TIMESTAMP',
+    ),
+  ],
+  primaryKeyConfig: const PrimaryKeyConfig(
+    name: 'id',
+    type: PrimaryKeyType.autoIncrement,
+  ),
+  indexes: [
+    IndexSchema(
+      name: 'idx_username',
+      fields: ['username'],
+      unique: true,
+    ),
+    IndexSchema(
+      name: 'idx_email',
+      fields: ['email'],
+    ),
+  ],
+  foreignKeys: [
+    ForeignKeySchema(
+      field: 'department_id',
+      referenceTable: 'departments',
+      referenceField: 'id',
+      onDelete: ForeignKeyAction.cascade,
+      onUpdate: ForeignKeyAction.cascade,
+    ),
+  ],
+);
+```
+
+## Schema Migration
+
+The package automatically handles schema changes when you update your table definitions and increment the database version:
+
+```dart
+// Version 1 schema
+final userSchemaV1 = TableSchema(
+  name: 'users',
+  fields: [
+    FieldSchema(name: 'username', type: DataType.text),
+    FieldSchema(name: 'email', type: DataType.text),
+  ],
+  primaryKeyConfig: const PrimaryKeyConfig(
+    name: 'id',
+    type: PrimaryKeyType.autoIncrement,
+  ),
+);
+
+// Version 2 schema with new field
+final userSchemaV2 = TableSchema(
+  name: 'users',
+  fields: [
+    FieldSchema(name: 'username', type: DataType.text),
+    FieldSchema(name: 'email', type: DataType.text),
+    FieldSchema(name: 'phone', type: DataType.text), // New field
+  ],
+  primaryKeyConfig: const PrimaryKeyConfig(
+    name: 'id',
+    type: PrimaryKeyType.autoIncrement,
+  ),
+);
+
+// Initialize with new version
+final storage = StorageEngine(
+  config: StorageConfig(
+    databaseName: 'my_app.db',
+    version: 2, // Increment version
+  ),
+  schemas: [userSchemaV2],
+);
+
+await storage.initialize();
+```
+
+## Performance Optimization
+
+### Connection Pooling
+
+The package uses connection pooling to improve performance:
+
+```dart
+final config = StorageConfig(
+  performance: PerformanceConfig(
+    connectionPoolSize: 5,
+    enablePreparedStatements: true,
+    enableQueryOptimization: true,
+  ),
+);
+```
+
+### Prepared Statements
+
+Prepared statements are automatically cached for frequently used queries:
+
+```dart
+final config = StorageConfig(
+  performance: PerformanceConfig(
+    enablePreparedStatements: true,
+  ),
+);
+```
+
+### Query Optimization
+
+The package automatically optimizes queries:
+
+```dart
+final config = StorageConfig(
+  performance: PerformanceConfig(
+    enableQueryOptimization: true,
+  ),
+);
+```
+
+### Batch Operations
+
+Use batch operations for multiple inserts, updates, or deletes:
+
+```dart
+// Batch insert
+final users = [
+  {'username': 'user1', 'email': 'user1@example.com'},
+  {'username': 'user2', 'email': 'user2@example.com'},
+  {'username': 'user3', 'email': 'user3@example.com'},
+];
+await storage.batchInsert('users', users);
+
+// Batch update
+final updates = [
+  {'id': 1, 'email': 'new1@example.com'},
+  {'id': 2, 'email': 'new2@example.com'},
+];
+await storage.batchUpdate('users', updates);
+
+// Batch delete
+await storage.batchDelete('users', [1, 2, 3]);
+```
+
+## Error Handling
+
+The package provides comprehensive error handling with specific exception types:
+
+```dart
+try {
+  await storage.insert('users', {'username': 'john_doe'});
+} on StorageException catch (e) {
+  print('Storage error: ${e.message}');
+  if (e.code != null) {
+    print('Error code: ${e.code}');
+  }
+  if (e.details != null) {
+    print('Details: ${e.details}');
+  }
+} catch (e) {
+  print('Unexpected error: $e');
+}
+```
+
+## Testing
+
+The package includes comprehensive test utilities:
+
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:local_storage_cache/local_storage_cache.dart';
+
+void main() {
+  late StorageEngine storage;
+
+  setUp(() async {
+    storage = StorageEngine(
+      config: StorageConfig(
+        databaseName: ':memory:', // In-memory database for testing
+      ),
+      schemas: [userSchema],
+    );
+    await storage.initialize();
+  });
+
+  tearDown(() async {
+    await storage.close();
+  });
+
+  test('insert and query user', () async {
+    final userId = await storage.insert('users', {
+      'username': 'test_user',
+      'email': 'test@example.com',
+    });
+
+    final users = await storage.query('users')
+      .where('id', '=', userId)
+      .get();
+
+    expect(users.length, 1);
+    expect(users.first['username'], 'test_user');
+  });
+}
+```
+
+## Examples
+
+Complete working examples are available in the [example](example) directory:
+
+- [Basic Usage](example/lib/screens/home_screen.dart)
+- [Advanced Queries](example/lib/screens/advanced_queries_screen.dart)
+- [Encryption](example/lib/screens/encryption_screen.dart)
+- [Multi-Space](example/lib/screens/multi_space_screen.dart)
+- [Backup and Restore](example/lib/screens/backup_restore_screen.dart)
+
+## API Reference
+
+For a complete list of available methods and configuration options, refer to the [API documentation](https://pub.dev/documentation/local_storage_cache/latest/).
+
+## Contributing
+
+Contributions are welcome. To set up your development environment:
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/protheeuz/local-storage-cache.git
+   cd local-storage-cache
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   flutter pub get
+   ```
+
+3. Activate Melos:
+
+   ```bash
+   dart pub global activate melos
+   ```
+
+4. Bootstrap the workspace:
+
+   ```bash
+   melos bootstrap
+   ```
+
+5. Run tests:
+
+   ```bash
+   melos test
+   ```
+
+Please read the [contributing guidelines](CONTRIBUTING.md) before submitting pull requests.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Support
+
+- Report issues on [GitHub Issues](https://github.com/protheeuz/local-storage-cache/issues)
+- Ask questions on [GitHub Discussions](https://github.com/protheeuz/local-storage-cache/discussions)
+- View the [changelog](CHANGELOG.md) for version history
+
+## Acknowledgments
+
+This package uses SQLite for local storage and implements platform-specific secure storage mechanisms for encryption key management.

@@ -1,4 +1,16 @@
-include: package:flutter_lints/flutter.yaml
+include: package:very_good_analysis/analysis_options.yaml
 
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
+linter:
+  rules:
+    # Additional project-specific rules
+    public_member_api_docs: true
+    lines_longer_than_80_chars: false
+    
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/generated/**"
+  
+  errors:
+    invalid_annotation_target: ignore
