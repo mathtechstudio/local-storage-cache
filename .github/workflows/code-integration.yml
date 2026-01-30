@@ -78,10 +78,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pub-
 
-      - name: Install Melos
+      - name: Install Melos (Unix)
+        if: runner.os != 'Windows'
         run: |
           flutter pub global activate melos
           echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+
+      - name: Install Melos (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          flutter pub global activate melos
+          echo "$env:LOCALAPPDATA\Pub\Cache\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        shell: pwsh
 
       - name: Bootstrap Workspace
         run: melos bootstrap
