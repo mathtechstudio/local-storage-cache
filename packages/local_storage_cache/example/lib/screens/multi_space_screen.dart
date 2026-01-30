@@ -44,10 +44,21 @@ class _MultiSpaceScreenState extends State<MultiSpaceScreen> {
     try {
       final storage = await DatabaseService().storage;
 
-      // Create a simple key-value table for demonstration
-      await storage.setValue('_table_created', 'true');
+      // Load all keys from the current space's key-value store
+      // Note: This is a simplified approach. In production, you might want
+      // to maintain a list of keys or use a proper table with schema.
+      final keys = await storage.getValue<List<dynamic>>('_keys') ?? [];
+      final data = <Map<String, dynamic>>[];
 
-      final data = await storage.query('settings').get();
+      for (final key in keys) {
+        if (key != '_keys') {
+          final value = await storage.getValue<String>(key as String);
+          if (value != null) {
+            data.add({'key': key, 'value': value});
+          }
+        }
+      }
+
       setState(() {
         _spaceData = data;
         _isLoading = false;
@@ -66,13 +77,16 @@ class _MultiSpaceScreenState extends State<MultiSpaceScreen> {
 
     try {
       final storage = await DatabaseService().storage;
-      await storage.insert(
-        'settings',
-        {
-          'key': _keyController.text,
-          'value': _valueController.text,
-        },
-      );
+
+      // Store the value using setValue
+      await storage.setValue(_keyController.text, _valueController.text);
+
+      // Update the keys list
+      final keys = await storage.getValue<List<dynamic>>('_keys') ?? [];
+      if (!keys.contains(_keyController.text)) {
+        keys.add(_keyController.text);
+        await storage.setValue('_keys', keys);
+      }
 
       _keyController.clear();
       _valueController.clear();
@@ -87,9 +101,15 @@ class _MultiSpaceScreenState extends State<MultiSpaceScreen> {
   Future<void> _deleteData(String key) async {
     try {
       final storage = await DatabaseService().storage;
-      final query = storage.query('settings');
-      query.where('key', '=', key);
-      await query.delete();
+
+      // Delete the value
+      await storage.deleteValue(key);
+
+      // Update the keys list
+      final keys = await storage.getValue<List<dynamic>>('_keys') ?? [];
+      keys.remove(key);
+      await storage.setValue('_keys', keys);
+
       _showSuccess('Data deleted');
       await _loadSpaceData();
     } catch (e) {
