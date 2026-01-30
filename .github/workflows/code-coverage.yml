@@ -43,6 +43,16 @@ jobs:
         run: flutter test --coverage
         working-directory: packages/local_storage_cache
 
+      - name: Verify Coverage File
+        run: |
+          if [ -f "packages/local_storage_cache/coverage/lcov.info" ]; then
+            echo "Coverage file found"
+            ls -lh packages/local_storage_cache/coverage/lcov.info
+          else
+            echo "Coverage file not found"
+            exit 1
+          fi
+
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
         with:
