@@ -32,6 +32,10 @@ migrate_working_dir/
 .pub/
 /build/
 
+# Code coverage
+coverage/
+*.lcov
+
 # Symbolication related
 app.*.symbols
 
