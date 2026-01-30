@@ -389,9 +389,63 @@ class QueryBuilder {
   }
 
   /// Builds SQL for a QueryCondition.
+  ///
+  /// Recursively processes nested conditions and generates proper SQL.
   String _buildConditionSQL(QueryCondition condition) {
-    // Simplified implementation - would need full condition parsing
-    return condition.toString();
+    final buffer = StringBuffer();
+    final clauses = condition.clauses;
+
+    for (var i = 0; i < clauses.length; i++) {
+      final clause = clauses[i];
+
+      // Handle OR operator
+      if (clause.type.toString().endsWith('or')) {
+        buffer.write(' OR ');
+        continue;
+      }
+
+      // Handle AND operator
+      if (clause.type.toString().endsWith('and')) {
+        buffer.write(' AND ');
+        continue;
+      }
+
+      // Handle nested condition
+      if (clause.type.toString().endsWith('nested') &&
+          clause.nestedCondition != null) {
+        buffer.write('(${_buildConditionSQL(clause.nestedCondition!)})');
+        continue;
+      }
+
+      // Add AND if not the first clause and previous wasn't OR/AND
+      if (i > 0 &&
+          !clauses[i - 1].type.toString().endsWith('or') &&
+          !clauses[i - 1].type.toString().endsWith('and')) {
+        buffer.write(' AND ');
+      }
+
+      // Handle WHERE clause
+      if (clause.type.toString().endsWith('where')) {
+        buffer.write('${clause.field} ${clause.operator} ?');
+      }
+
+      // Handle WHERE IN clause
+      if (clause.type.toString().endsWith('whereIn')) {
+        final placeholders =
+            List.filled((clause.value as List).length, '?').join(', ');
+        buffer.write('${clause.field} IN ($placeholders)');
+      }
+
+      // Custom predicates cannot be converted to SQL
+      if (clause.type.toString().endsWith('custom')) {
+        throw UnsupportedError(
+          'Custom predicates cannot be converted to SQL. '
+          'Use where() or whereIn() instead.',
+        );
+      }
+    }
+
+    return buffer.toString();
   }
 
   /// Builds the arguments list for the query.
@@ -399,7 +453,12 @@ class QueryBuilder {
     final arguments = <dynamic>[];
 
     for (final clause in _whereClauses) {
-      if (clause.isOr || clause.isAnd || clause.condition != null) continue;
+      if (clause.isOr || clause.isAnd) continue;
+
+      if (clause.condition != null) {
+        arguments.addAll(_buildConditionArguments(clause.condition!));
+        continue;
+      }
 
       if (clause.customSQL != null && clause.customArguments != null) {
         arguments.addAll(clause.customArguments!);
@@ -416,6 +475,49 @@ class QueryBuilder {
         arguments.addAll(clause.value as List);
       } else {
         arguments.add(clause.value);
+      }
+    }
+
+    return arguments;
+  }
+
+  /// Builds arguments list from a QueryCondition.
+  ///
+  /// Recursively extracts arguments from nested conditions.
+  List<dynamic> _buildConditionArguments(QueryCondition condition) {
+    final arguments = <dynamic>[];
+    final clauses = condition.clauses;
+
+    for (final clause in clauses) {
+      // Skip operators
+      if (clause.type.toString().endsWith('or') ||
+          clause.type.toString().endsWith('and')) {
+        continue;
+      }
+
+      // Handle nested condition recursively
+      if (clause.type.toString().endsWith('nested') &&
+          clause.nestedCondition != null) {
+        arguments.addAll(_buildConditionArguments(clause.nestedCondition!));
+        continue;
+      }
+
+      // Handle WHERE clause
+      if (clause.type.toString().endsWith('where')) {
+        arguments.add(clause.value);
+      }
+
+      // Handle WHERE IN clause
+      if (clause.type.toString().endsWith('whereIn')) {
+        arguments.addAll(clause.value as List);
+      }
+
+      // Custom predicates don't have SQL arguments
+      if (clause.type.toString().endsWith('custom')) {
+        throw UnsupportedError(
+          'Custom predicates cannot be converted to SQL. '
+          'Use where() or whereIn() instead.',
+        );
       }
     }
 

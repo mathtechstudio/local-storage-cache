@@ -1,12 +1,12 @@
 /// Represents a query condition that can be nested.
 class QueryCondition {
-  final List<_ConditionClause> _clauses = [];
+  final List<ConditionClause> _clauses = [];
 
   /// Adds a WHERE clause.
   void where(String field, String operator, dynamic value) {
     _clauses.add(
-      _ConditionClause(
-        type: _ClauseType.where,
+      ConditionClause(
+        type: ClauseType.where,
         field: field,
         operator: operator,
         value: value,
@@ -22,8 +22,8 @@ class QueryCondition {
   /// Adds a WHERE field IN values clause.
   void whereIn(String field, List<dynamic> values) {
     _clauses.add(
-      _ConditionClause(
-        type: _ClauseType.whereIn,
+      ConditionClause(
+        type: ClauseType.whereIn,
         field: field,
         value: values,
       ),
@@ -35,8 +35,8 @@ class QueryCondition {
     bool Function(Map<String, dynamic> record) predicate,
   ) {
     _clauses.add(
-      _ConditionClause(
-        type: _ClauseType.custom,
+      ConditionClause(
+        type: ClauseType.custom,
         customPredicate: predicate,
       ),
     );
@@ -44,19 +44,19 @@ class QueryCondition {
 
   /// Adds an OR operator.
   void or() {
-    _clauses.add(_ConditionClause(type: _ClauseType.or));
+    _clauses.add(ConditionClause(type: ClauseType.or));
   }
 
   /// Adds an AND operator.
   void and() {
-    _clauses.add(_ConditionClause(type: _ClauseType.and));
+    _clauses.add(ConditionClause(type: ClauseType.and));
   }
 
   /// Adds a nested condition.
   void condition(QueryCondition condition) {
     _clauses.add(
-      _ConditionClause(
-        type: _ClauseType.nested,
+      ConditionClause(
+        type: ClauseType.nested,
         nestedCondition: condition,
       ),
     );
@@ -67,12 +67,36 @@ class QueryCondition {
     or();
     this.condition(condition);
   }
+
+  /// Gets the list of clauses for SQL generation.
+  List<ConditionClause> get clauses => _clauses;
 }
 
-enum _ClauseType { where, whereIn, custom, or, and, nested }
+/// Type of clause in a query condition.
+enum ClauseType {
+  /// A WHERE clause with field, operator, and value.
+  where,
 
-class _ConditionClause {
-  _ConditionClause({
+  /// A WHERE IN clause with field and list of values.
+  whereIn,
+
+  /// A custom predicate clause.
+  custom,
+
+  /// An OR logical operator.
+  or,
+
+  /// An AND logical operator.
+  and,
+
+  /// A nested condition clause.
+  nested,
+}
+
+/// Represents a clause in a query condition.
+class ConditionClause {
+  /// Creates a condition clause.
+  ConditionClause({
     required this.type,
     this.field,
     this.operator,
@@ -80,10 +104,22 @@ class _ConditionClause {
     this.customPredicate,
     this.nestedCondition,
   });
-  final _ClauseType type;
+
+  /// The type of clause.
+  final ClauseType type;
+
+  /// The field name for WHERE clauses.
   final String? field;
+
+  /// The operator for WHERE clauses.
   final String? operator;
+
+  /// The value for WHERE clauses.
   final dynamic value;
+
+  /// Custom predicate function for custom clauses.
   final bool Function(Map<String, dynamic>)? customPredicate;
+
+  /// Nested condition for nested clauses.
   final QueryCondition? nestedCondition;
 }
