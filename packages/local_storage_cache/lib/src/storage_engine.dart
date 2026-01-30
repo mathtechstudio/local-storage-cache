@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:local_storage_cache/src/config/storage_config.dart';
 import 'package:local_storage_cache/src/managers/event_manager.dart';
@@ -170,11 +173,15 @@ class StorageEngine {
     }
   }
 
-  /// Generates a random encryption key.
+  /// Generates a cryptographically secure random encryption key.
+  ///
+  /// Uses [Random.secure()] to generate a 256-bit (32-byte) key
+  /// that is suitable for AES-256 encryption.
   String _generateEncryptionKey() {
-    // Generate a 32-byte (256-bit) key
-    final random = DateTime.now().millisecondsSinceEpoch.toString();
-    return random.padRight(32, '0').substring(0, 32);
+    final random = Random.secure();
+    // Generate 32 random bytes for a 256-bit key
+    final keyBytes = List<int>.generate(32, (_) => random.nextInt(256));
+    return base64Url.encode(keyBytes);
   }
 
   /// Creates tables from schemas.
