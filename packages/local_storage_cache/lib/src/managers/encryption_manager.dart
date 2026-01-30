@@ -1,7 +1,7 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
 import 'package:local_storage_cache/src/config/encryption_config.dart';
 import 'package:local_storage_cache/src/enums/encryption_algorithm.dart';
 import 'package:local_storage_cache_platform_interface/local_storage_cache_platform_interface.dart';
@@ -72,10 +72,9 @@ class EncryptionManager {
 
   /// Generates a random encryption key.
   String _generateKey() {
-    final timestamp = DateTime.now().microsecondsSinceEpoch;
-    final random = timestamp.toString();
-    final hash = sha256.convert(utf8.encode(random));
-    return base64Url.encode(hash.bytes);
+    final random = Random.secure();
+    final keyBytes = List<int>.generate(32, (_) => random.nextInt(256));
+    return base64Url.encode(keyBytes);
   }
 
   /// Encrypts plain text.

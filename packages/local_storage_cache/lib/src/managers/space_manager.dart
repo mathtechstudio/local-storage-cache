@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:local_storage_cache/src/models/storage_stats.dart';
 import 'package:local_storage_cache/src/schema/table_schema.dart';
@@ -351,13 +352,16 @@ class SpaceManager {
 
   /// Encodes metadata to JSON string.
   String _encodeMetadata(Map<String, dynamic> metadata) {
-    return metadata.toString(); // Simplified - in production use json.encode
+    return jsonEncode(metadata);
   }
 
   /// Decodes metadata from JSON string.
   Map<String, dynamic> _decodeMetadata(String json) {
-    // Simplified - in production use json.decode
-    return {};
+    try {
+      return jsonDecode(json) as Map<String, dynamic>;
+    } catch (e) {
+      return {};
+    }
   }
 
   /// Loads global tables from database.

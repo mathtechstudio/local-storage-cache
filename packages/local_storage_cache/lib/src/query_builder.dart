@@ -1,6 +1,9 @@
 import 'package:local_storage_cache/src/models/query_condition.dart';
 import 'package:local_storage_cache_platform_interface/local_storage_cache_platform_interface.dart';
 
+export 'package:local_storage_cache/src/models/query_condition.dart'
+    show ClauseType;
+
 /// Fluent query builder for constructing and executing queries.
 ///
 /// Provides an API for building complex database queries with
@@ -412,45 +415,44 @@ class QueryBuilder {
       final clause = clauses[i];
 
       // Handle OR operator
-      if (clause.type.toString().endsWith('or')) {
+      if (clause.type == ClauseType.or) {
         buffer.write(' OR ');
         continue;
       }
 
       // Handle AND operator
-      if (clause.type.toString().endsWith('and')) {
+      if (clause.type == ClauseType.and) {
         buffer.write(' AND ');
         continue;
       }
 
       // Handle nested condition
-      if (clause.type.toString().endsWith('nested') &&
-          clause.nestedCondition != null) {
+      if (clause.type == ClauseType.nested && clause.nestedCondition != null) {
         buffer.write('(${_buildConditionSQL(clause.nestedCondition!)})');
         continue;
       }
 
       // Add AND if not the first clause and previous wasn't OR/AND
       if (i > 0 &&
-          !clauses[i - 1].type.toString().endsWith('or') &&
-          !clauses[i - 1].type.toString().endsWith('and')) {
+          clauses[i - 1].type != ClauseType.or &&
+          clauses[i - 1].type != ClauseType.and) {
         buffer.write(' AND ');
       }
 
       // Handle WHERE clause
-      if (clause.type.toString().endsWith('where')) {
+      if (clause.type == ClauseType.where) {
         buffer.write('${clause.field} ${clause.operator} ?');
       }
 
       // Handle WHERE IN clause
-      if (clause.type.toString().endsWith('whereIn')) {
+      if (clause.type == ClauseType.whereIn) {
         final placeholders =
             List.filled((clause.value as List).length, '?').join(', ');
         buffer.write('${clause.field} IN ($placeholders)');
       }
 
       // Custom predicates cannot be converted to SQL
-      if (clause.type.toString().endsWith('custom')) {
+      if (clause.type == ClauseType.custom) {
         throw UnsupportedError(
           'Custom predicates cannot be converted to SQL. '
           'Use where() or whereIn() instead.',
@@ -503,30 +505,28 @@ class QueryBuilder {
 
     for (final clause in clauses) {
       // Skip operators
-      if (clause.type.toString().endsWith('or') ||
-          clause.type.toString().endsWith('and')) {
+      if (clause.type == ClauseType.or || clause.type == ClauseType.and) {
         continue;
       }
 
       // Handle nested condition recursively
-      if (clause.type.toString().endsWith('nested') &&
-          clause.nestedCondition != null) {
+      if (clause.type == ClauseType.nested && clause.nestedCondition != null) {
         arguments.addAll(_buildConditionArguments(clause.nestedCondition!));
         continue;
       }
 
       // Handle WHERE clause
-      if (clause.type.toString().endsWith('where')) {
+      if (clause.type == ClauseType.where) {
         arguments.add(clause.value);
       }
 
       // Handle WHERE IN clause
-      if (clause.type.toString().endsWith('whereIn')) {
+      if (clause.type == ClauseType.whereIn) {
         arguments.addAll(clause.value as List);
       }
 
       // Custom predicates don't have SQL arguments
-      if (clause.type.toString().endsWith('custom')) {
+      if (clause.type == ClauseType.custom) {
         throw UnsupportedError(
           'Custom predicates cannot be converted to SQL. '
           'Use where() or whereIn() instead.',

@@ -26,6 +26,13 @@ class MemoryCache {
   /// Insertion order queue for FIFO.
   final Queue<String> _insertionQueue = Queue<String>();
 
+  /// Frequency map for LFU optimization.
+  /// Maps frequency count to set of keys with that frequency.
+  final Map<int, Set<String>> _frequencyMap = {};
+
+  /// Minimum frequency for LFU.
+  int _minFrequency = 0;
+
   /// Gets a value from cache.
   T? get<T>(String key) {
     final entry = _cache[key];
@@ -37,6 +44,8 @@ class MemoryCache {
       return null;
     }
 
+    final oldAccessCount = entry.accessCount;
+
     // Update access metadata
     entry.markAccessed();
 
@@ -45,6 +54,11 @@ class MemoryCache {
       _accessQueue
         ..remove(key)
         ..addLast(key);
+    }
+
+    // Update LFU frequency map
+    if (evictionPolicy == EvictionPolicy.lfu) {
+      _updateFrequency(key, oldAccessCount, entry.accessCount);
     }
 
     return entry.value as T;
@@ -79,14 +93,30 @@ class MemoryCache {
     if (evictionPolicy == EvictionPolicy.fifo) {
       _insertionQueue.addLast(key);
     }
+
+    // Update LFU frequency map (new entries start at frequency 0)
+    if (evictionPolicy == EvictionPolicy.lfu) {
+      _frequencyMap.putIfAbsent(0, () => {}).add(key);
+      _minFrequency = 0;
+    }
   }
 
   /// Removes a value from cache.
   bool remove(String key) {
+    final entry = _cache[key];
     final removed = _cache.remove(key) != null;
     if (removed) {
       _accessQueue.remove(key);
       _insertionQueue.remove(key);
+
+      // Remove from LFU frequency map
+      if (evictionPolicy == EvictionPolicy.lfu && entry != null) {
+        final freq = entry.accessCount;
+        _frequencyMap[freq]?.remove(key);
+        if (_frequencyMap[freq]?.isEmpty ?? false) {
+          _frequencyMap.remove(freq);
+        }
+      }
     }
     return removed;
   }
@@ -153,14 +183,15 @@ class MemoryCache {
         keyToEvict = _accessQueue.isNotEmpty ? _accessQueue.first : null;
 
       case EvictionPolicy.lfu:
-        // Evict least frequently used
-        CacheEntry<dynamic>? leastUsed;
-        for (final entry in _cache.values) {
-          if (leastUsed == null || entry.accessCount < leastUsed.accessCount) {
-            leastUsed = entry;
+        // Evict least frequently used using optimized frequency map
+        if (_frequencyMap.isNotEmpty) {
+          // Find minimum frequency
+          final minFreq = _frequencyMap.keys.reduce((a, b) => a < b ? a : b);
+          final keysAtMinFreq = _frequencyMap[minFreq];
+          if (keysAtMinFreq != null && keysAtMinFreq.isNotEmpty) {
+            keyToEvict = keysAtMinFreq.first;
           }
         }
-        keyToEvict = leastUsed?.key;
 
       case EvictionPolicy.fifo:
         // Evict first in
@@ -170,5 +201,17 @@ class MemoryCache {
     if (keyToEvict != null) {
       remove(keyToEvict);
     }
+  }
+
+  /// Updates frequency map when access count changes (for LFU optimization).
+  void _updateFrequency(String key, int oldFreq, int newFreq) {
+    // Remove from old frequency set
+    _frequencyMap[oldFreq]?.remove(key);
+    if (_frequencyMap[oldFreq]?.isEmpty ?? false) {
+      _frequencyMap.remove(oldFreq);
+    }
+
+    // Add to new frequency set
+    _frequencyMap.putIfAbsent(newFreq, () => {}).add(key);
   }
 }

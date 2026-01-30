@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:local_storage_cache/src/enums/eviction_policy.dart';
 import 'package:local_storage_cache/src/models/cache_entry.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +14,7 @@ class DiskCache {
   DiskCache({
     required this.maxSize,
     this.cacheDirectory = 'cache',
+    this.evictionPolicy = EvictionPolicy.lru,
   });
 
   /// Maximum number of entries.
@@ -20,6 +22,9 @@ class DiskCache {
 
   /// Cache directory name.
   final String cacheDirectory;
+
+  /// Eviction policy.
+  final EvictionPolicy evictionPolicy;
 
   /// Cache directory path.
   late final Directory _cacheDir;
@@ -254,17 +259,32 @@ class DiskCache {
     await file.writeAsString(json);
   }
 
-  /// Evicts the oldest entry.
+  /// Evicts an entry based on the eviction policy.
   Future<void> _evictOldest() async {
     final allEntries = await entries;
 
     if (allEntries.isEmpty) return;
 
-    // Sort by creation time
-    allEntries.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    CacheEntry<dynamic>? entryToEvict;
 
-    // Remove oldest
-    await remove(allEntries.first.key);
+    switch (evictionPolicy) {
+      case EvictionPolicy.lru:
+        // Evict least recently used
+        allEntries.sort((a, b) => a.lastAccessedAt.compareTo(b.lastAccessedAt));
+        entryToEvict = allEntries.first;
+
+      case EvictionPolicy.lfu:
+        // Evict least frequently used
+        allEntries.sort((a, b) => a.accessCount.compareTo(b.accessCount));
+        entryToEvict = allEntries.first;
+
+      case EvictionPolicy.fifo:
+        // Evict first in (oldest by creation time)
+        allEntries.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        entryToEvict = allEntries.first;
+    }
+
+    await remove(entryToEvict.key);
   }
 
   /// Ensures the cache is initialized.
