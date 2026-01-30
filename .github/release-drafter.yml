@@ -1,0 +1,79 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+categories:
+  - title: 'Breaking Changes'
+    labels:
+      - 'breaking'
+      - 'breaking-change'
+  - title: 'New Features'
+    labels:
+      - 'feature'
+      - 'feat'
+      - 'enhancement'
+  - title: 'Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+  - title: 'Performance Improvements'
+    labels:
+      - 'performance'
+      - 'perf'
+  - title: 'Documentation'
+    labels:
+      - 'documentation'
+      - 'docs'
+  - title: 'Dependency Updates'
+    labels:
+      - 'dependencies'
+      - 'deps'
+  - title: 'Maintenance'
+    labels:
+      - 'chore'
+      - 'refactor'
+      - 'test'
+      - 'ci'
+
+change-template: '- $TITLE (#$NUMBER)'
+change-title-escapes: '\<*_&'
+
+version-resolver:
+  major:
+    labels:
+      - 'breaking'
+      - 'breaking-change'
+  minor:
+    labels:
+      - 'feature'
+      - 'feat'
+      - 'enhancement'
+  patch:
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+      - 'documentation'
+      - 'docs'
+      - 'chore'
+      - 'dependencies'
+      - 'deps'
+  default: patch
+
+template: |
+  ## Changes
+
+  $CHANGES
+
+  ## Installation
+
+  Add this to your package's `pubspec.yaml` file:
+
+  ```yaml
+  dependencies:
+    local_storage_cache: ^$RESOLVED_VERSION
+  ```
+
+  ## Contributors
+
+  $CONTRIBUTORS
