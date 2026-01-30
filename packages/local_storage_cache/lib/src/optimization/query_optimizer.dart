@@ -173,7 +173,6 @@ class QueryOptimizer {
     if (schema == null) return [];
 
     final missingIndexes = <String>[];
-    final normalizedSql = sql.toUpperCase();
 
     // Check WHERE clause
     final whereMatch =

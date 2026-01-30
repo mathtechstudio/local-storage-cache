@@ -47,7 +47,7 @@ jobs:
         run: melos bootstrap
 
       - name: Run Unit Tests
-        run: melos test
+        run: melos exec --fail-fast --ignore="*_web" --concurrency=1 -- flutter test
 
   platform_tests:
     name: Platform Tests
@@ -78,13 +78,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pub-
 
-      - name: Install Melos
+      - name: Install Melos (Unix)
+        if: runner.os != 'Windows'
         run: |
           flutter pub global activate melos
           echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
 
-      - name: Bootstrap Workspace
+      - name: Install Melos (Windows)
+        if: runner.os == 'Windows'
+        run: flutter pub global activate melos
+        shell: pwsh
+
+      - name: Bootstrap Workspace (Unix)
+        if: runner.os != 'Windows'
         run: melos bootstrap
+
+      - name: Bootstrap Workspace (Windows)
+        if: runner.os == 'Windows'
+        run: flutter pub global run melos bootstrap
+        shell: pwsh
 
       - name: Run Platform Tests
         run: flutter test

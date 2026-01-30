@@ -3,13 +3,13 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
 
 permissions:
   contents: write
 
 jobs:
-  create_release:
+  create-release:
     name: Create Release
     runs-on: ubuntu-latest
     
@@ -19,51 +19,57 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get Tag Name
-        id: tag
-        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      - name: Set Up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
 
-      - name: Get Previous Tag
-        id: prev_tag
+      - name: Install Melos
         run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 ${{ steps.tag.outputs.tag }}^ 2>/dev/null || echo "")
-          echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
+          flutter pub global activate melos
+          echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+
+      - name: Bootstrap Workspace
+        run: melos bootstrap
+
+      - name: Run Tests
+        run: melos test
+
+      - name: Run Analysis
+        run: melos analyze
 
       - name: Generate Changelog
         id: changelog
         run: |
-          if [ -z "${{ steps.prev_tag.outputs.prev_tag }}" ]; then
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" ${{ steps.tag.outputs.tag }})
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            # First release, get all commits
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
           else
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" ${{ steps.prev_tag.outputs.prev_tag }}..${{ steps.tag.outputs.tag }})
+            # Get commits since previous tag
+            COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
           fi
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          
+          # Save to file for multiline output
+          echo "$COMMITS" > changelog.txt
+          
+          # Set output
+          echo "previous_tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: Release ${{ steps.tag.outputs.tag }}
-          body: |
-            ## Changes in ${{ steps.tag.outputs.tag }}
-            
-            ${{ steps.changelog.outputs.changelog }}
-            
-            ## Installation
-            
-            Add this to your package's `pubspec.yaml` file:
-            
-            ```yaml
-            dependencies:
-              local_storage_cache: ${{ steps.tag.outputs.tag }}
-            ```
-            
-            ## Full Changelog
-            
-            See [CHANGELOG.md](https://github.com/protheeuz/local-storage-cache/blob/${{ steps.tag.outputs.tag }}/packages/local_storage_cache/CHANGELOG.md) for detailed changes.
+          body_path: changelog.txt
           draft: false
-          prerelease: ${{ contains(steps.tag.outputs.tag, '-') }}
+          prerelease: false
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify Success
+        run: |
+          echo "✅ Release ${{ github.ref_name }} created successfully!"
+          echo "📦 View release at: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"

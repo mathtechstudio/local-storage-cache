@@ -32,3 +32,4 @@ build/
 
 .kiro/
 AGENTS.md
+.github/RELEASE_PROCESS.md

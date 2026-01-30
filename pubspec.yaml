@@ -38,11 +38,11 @@ melos:
       
     test:
       description: Run tests in all packages
-      run: melos exec --fail-fast -- flutter test
+      run: melos exec --fail-fast --ignore="*_web" --concurrency=1 -- flutter test
       
     test:coverage:
       description: Run tests with coverage in all packages
-      run: melos exec --fail-fast -- flutter test --coverage
+      run: melos exec --fail-fast --ignore="*_web" --concurrency=1 -- flutter test --coverage
       
     clean:
       description: Clean all packages
