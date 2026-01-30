@@ -7,7 +7,6 @@ import 'package:local_storage_cache/src/models/warm_cache_entry.dart';
 
 import 'mocks/mock_platform_channels.dart';
 
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
