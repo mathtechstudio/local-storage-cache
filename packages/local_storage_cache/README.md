@@ -1,9 +1,10 @@
 # local_storage_cache
 
 [![Pub Version](https://img.shields.io/pub/v/local_storage_cache.svg)](https://pub.dev/packages/local_storage_cache)
-[![Build Status](https://github.com/protheeuz/local-storage-cache/actions/workflows/code-integration.yml/badge.svg)](https://github.com/protheeuz/local-storage-cache/actions/workflows/code-integration.yml)
-[![Code Coverage](https://codecov.io/gh/protheeuz/local-storage-cache/graph/badge.svg)](https://codecov.io/gh/protheeuz/local-storage-cache)
+[![Build Status](https://github.com/mathtechstudio/local-storage-cache/actions/workflows/code-integration.yml/badge.svg)](https://github.com/mathtechstudio/local-storage-cache/actions/workflows/code-integration.yml)
+[![Code Coverage](https://codecov.io/gh/mathtechstudio/local-storage-cache/graph/badge.svg)](https://codecov.io/gh/mathtechstudio/local-storage-cache)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Web-informational)
 
 A comprehensive Flutter package for local storage and caching with advanced features including encryption, multi-space architecture, automatic schema migration, and high-performance query capabilities. Supports Android, iOS, macOS, Windows, Linux, and Web.
 
@@ -657,7 +658,7 @@ Contributions are welcome. To set up your development environment:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/protheeuz/local-storage-cache.git
+   git clone https://github.com/mathtechstudio/local-storage-cache.git
    cd local-storage-cache
    ```
 
@@ -693,9 +694,9 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Support
 
-- Report issues on [GitHub Issues](https://github.com/protheeuz/local-storage-cache/issues)
-- Ask questions on [GitHub Discussions](https://github.com/protheeuz/local-storage-cache/discussions)
-- View the [changelog](CHANGELOG.md) for version history
+- Report issues on [GitHub Issues](https://github.com/mathtechstudio/local-storage-cache/issues)
+- Ask questions on [GitHub Discussions](https://github.com/mathtechstudio/local-storage-cache/discussions)
+- View the [CHANGELOG](CHANGELOG.md) for version history
 
 ## Acknowledgments
 

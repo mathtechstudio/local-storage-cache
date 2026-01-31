@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1
+
+### Fixed
+
+* Fixed federated plugin configuration - added platform implementation packages as dependencies
+* This resolves the "package does not exist, or is not a plugin package" error when installing
+
 ## 2.0.0
 
 ### New Features

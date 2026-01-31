@@ -1,6 +1,6 @@
 name: local_storage_cache
 description: A comprehensive Flutter package for managing local storage and caching with advanced features like encryption, TTL, multi-space architecture, and more.
-version: 2.0.0
+version: 2.0.1
 homepage: https://github.com/mathtechstudio/local-storage-cache
 repository: https://github.com/mathtechstudio/local-storage-cache
 
@@ -14,7 +14,13 @@ dependencies:
   crypto: ^3.0.7
   flutter:
     sdk: flutter
+  local_storage_cache_android: ^2.0.0
+  local_storage_cache_ios: ^2.0.0
+  local_storage_cache_linux: ^2.0.0
+  local_storage_cache_macos: ^2.0.0
   local_storage_cache_platform_interface: ^2.0.0
+  local_storage_cache_web: ^2.0.0
+  local_storage_cache_windows: ^2.0.0
   path: ^1.9.0
   path_provider: ^2.1.0
   plugin_platform_interface: ^2.1.0
