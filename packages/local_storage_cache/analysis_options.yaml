@@ -36,8 +36,6 @@ analyzer:
     await_only_futures: info
     unawaited_futures: info
     use_of_void_result: ignore
-    # Ignore path dependency warning for monorepo development
-    invalid_dependency: ignore
     
   exclude:
     - '**/*.g.dart'

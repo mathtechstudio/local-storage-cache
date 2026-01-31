@@ -12,8 +12,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  local_storage_cache_platform_interface:
-    path: ../local_storage_cache_platform_interface
+  local_storage_cache_platform_interface: ^2.0.0
 
 dev_dependencies:
   flutter_test:
