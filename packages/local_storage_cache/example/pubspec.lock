@@ -83,6 +83,11 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_web_plugins:
+    dependency: transitive
+    description: flutter
+    source: sdk
+    version: "0.0.0"
   intl:
     dependency: "direct main"
     description:
@@ -130,12 +135,61 @@ packages:
       relative: true
     source: path
     version: "2.0.0"
+  local_storage_cache_android:
+    dependency: transitive
+    description:
+      name: local_storage_cache_android
+      sha256: d3f047a0d4ebf1922a4851b3bebf6f2b273fc23927100a479e9e3203e85333ca
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
+  local_storage_cache_ios:
+    dependency: transitive
+    description:
+      name: local_storage_cache_ios
+      sha256: "206ce02945dbef7f0a3786721cab1cd4e688b98ff32555024ccf942994537a3d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
+  local_storage_cache_linux:
+    dependency: transitive
+    description:
+      name: local_storage_cache_linux
+      sha256: "3a8b5db07571239512461bc376bd2cdbbfeee35d966c8aa88da67a5a0f6908c9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
+  local_storage_cache_macos:
+    dependency: transitive
+    description:
+      name: local_storage_cache_macos
+      sha256: e27e1bc10dc386f5823f0841fb09385744d11c92c76c490a7b174f357a723eb7
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   local_storage_cache_platform_interface:
     dependency: transitive
     description:
-      path: "../../local_storage_cache_platform_interface"
-      relative: true
-    source: path
+      name: local_storage_cache_platform_interface
+      sha256: "5744f5b803cc4e8b615dd5e674385b6ef8d9fe46962eb03dacf09f00704864d5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
+  local_storage_cache_web:
+    dependency: transitive
+    description:
+      name: local_storage_cache_web
+      sha256: "79092e4bc70f369b953499e0f1013d208101569e4f79bff5446c954ec1367127"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
+  local_storage_cache_windows:
+    dependency: transitive
+    description:
+      name: local_storage_cache_windows
+      sha256: "16fa0ddb39510748e95fad56b9288a20ce6c1e10ba34fb91f214fcacd3ddcf8c"
+      url: "https://pub.dev"
+    source: hosted
     version: "2.0.0"
   matcher:
     dependency: transitive
@@ -310,6 +364,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "15.0.0"
+  web:
+    dependency: transitive
+    description:
+      name: web
+      sha256: "868d88a33d8a87b18ffc05f9f030ba328ffefba92d6c127917a2ba740f9cfe4a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.1"
   xdg_directories:
     dependency: transitive
     description:
