@@ -27,7 +27,7 @@ Add the dependency in your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  local_storage_cache: ^2.0.0
+  local_storage_cache: ^<latest-version>
 ```
 
 Then run:
