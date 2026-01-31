@@ -52,4 +52,4 @@ Biometric authentication is not currently supported on Linux. This feature may b
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
