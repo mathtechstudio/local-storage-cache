@@ -49,4 +49,4 @@ This implementation uses iOS Keychain for secure key storage, providing hardware
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) file for details.

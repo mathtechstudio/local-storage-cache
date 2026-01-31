@@ -48,4 +48,4 @@ This implementation uses Android Keystore for secure key storage, providing hard
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
