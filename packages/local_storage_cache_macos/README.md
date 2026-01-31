@@ -44,4 +44,4 @@ This implementation uses macOS Keychain for secure key storage, providing system
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) file for details.

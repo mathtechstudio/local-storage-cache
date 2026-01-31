@@ -61,4 +61,4 @@ The implementation uses `package:web` with `dart:js_interop`, following Flutter'
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
