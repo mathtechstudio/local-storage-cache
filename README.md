@@ -4,7 +4,7 @@
 [![Build Status](https://github.com/mathtechstudio/local-storage-cache/actions/workflows/code-integration.yml/badge.svg)](https://github.com/mathtechstudio/local-storage-cache/actions/workflows/code-integration.yml)
 [![Code Coverage](https://codecov.io/gh/mathtechstudio/local-storage-cache/graph/badge.svg)](https://codecov.io/gh/mathtechstudio/local-storage-cache)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20macOS%20%7C%20Windows-informational)
+![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Web-informational)
 
 A comprehensive Flutter package for local storage and caching with advanced features including encryption, multi-space architecture, automatic schema migration, and high-performance query capabilities. Supports Android, iOS, macOS, Windows, Linux, and Web.
 
